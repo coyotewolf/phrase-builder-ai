@@ -7,6 +7,7 @@ import Home from "./pages/Home";
 import Wordbooks from "./pages/Wordbooks";
 import Statistics from "./pages/Statistics";
 import Settings from "./pages/Settings";
+import Review from "./pages/Review";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
           <Route path="/wordbooks" element={<Wordbooks />} />
           <Route path="/statistics" element={<Statistics />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/review" element={<Review />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
