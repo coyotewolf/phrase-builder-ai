@@ -1,17 +1,58 @@
 import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen, TrendingUp, Star, Shuffle, Calendar } from "lucide-react";
+import { db } from "@/lib/db";
 
 const Home = () => {
   const navigate = useNavigate();
+  const [dueCount, setDueCount] = useState(0);
+  const [todayCompleted, setTodayCompleted] = useState(0);
+  const [dailyGoal, setDailyGoal] = useState(20);
+  const progressPercentage = dailyGoal > 0 ? (todayCompleted / dailyGoal) * 100 : 0;
 
-  // Mock data - will be replaced with real data
-  const dueCount = 12;
-  const todayCompleted = 8;
-  const dailyGoal = 20;
-  const progressPercentage = (todayCompleted / dailyGoal) * 100;
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  const loadStats = async () => {
+    try {
+      // Get user settings for daily goal
+      const settings = await db.getUserSettings();
+      setDailyGoal(settings.daily_goal);
+
+      // Calculate due cards count
+      const dueCards = await db.getDueCards();
+      setDueCount(dueCards.length);
+
+      // Calculate today's completed count
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const allWordbooks = await db.getAllWordbooks();
+      let count = 0;
+      
+      for (const wordbook of allWordbooks) {
+        const cards = await db.getCardsByWordbook(wordbook.id);
+        for (const card of cards) {
+          const stats = await db.getCardStats(card.id);
+          if (stats?.last_reviewed_at) {
+            const reviewDate = new Date(stats.last_reviewed_at);
+            reviewDate.setHours(0, 0, 0, 0);
+            if (reviewDate.getTime() === today.getTime()) {
+              count++;
+            }
+          }
+        }
+      }
+      
+      setTodayCompleted(count);
+    } catch (error) {
+      console.error("Failed to load stats:", error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 p-6">

@@ -1,15 +1,17 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
-import { Download, Upload, Key } from "lucide-react";
+import { Download, Upload, Key, ArrowLeft } from "lucide-react";
 import { db, UserSettings as UserSettingsType } from "@/lib/db";
 import { ApiKeyDialog } from "@/components/ApiKeyDialog";
 import { toast } from "sonner";
 
 const Settings = () => {
+  const navigate = useNavigate();
   const [settings, setSettings] = useState<UserSettingsType>({
     id: 'default',
     daily_goal: 20,
@@ -111,9 +113,15 @@ const Settings = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 p-6">
       <div className="mx-auto max-w-3xl space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">設置</h1>
-          <p className="text-muted-foreground">個性化你的學習體驗</p>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" onClick={() => navigate("/")}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            返回主頁
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">設置</h1>
+            <p className="text-muted-foreground">個性化你的學習體驗</p>
+          </div>
         </div>
 
         <Card className="p-6 space-y-6">

@@ -1,4 +1,7 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { TrendingUp, Target, Flame } from "lucide-react";
 import { db, Card as CardType, CardStats } from "@/lib/db";
@@ -11,6 +14,7 @@ interface ErrorCard {
 }
 
 const Statistics = () => {
+  const navigate = useNavigate();
   const [errorCards, setErrorCards] = useState<ErrorCard[]>([]);
   const [todayCount, setTodayCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -73,9 +77,15 @@ const Statistics = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 p-6">
       <div className="mx-auto max-w-6xl space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">學習統計</h1>
-          <p className="text-muted-foreground">追蹤你的學習進度</p>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" onClick={() => navigate("/")}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            返回主頁
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">學習統計</h1>
+            <p className="text-muted-foreground">追蹤你的學習進度</p>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

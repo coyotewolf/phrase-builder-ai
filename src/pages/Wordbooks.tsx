@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Plus, BookOpen, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Plus, BookOpen, Trash2, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,11 +18,13 @@ import { db, Wordbook } from "@/lib/db";
 import { toast } from "sonner";
 
 const Wordbooks = () => {
+  const navigate = useNavigate();
   const [wordbooks, setWordbooks] = useState<Wordbook[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newWordbookName, setNewWordbookName] = useState("");
   const [newWordbookDescription, setNewWordbookDescription] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [cardCounts, setCardCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     loadWordbooks();
@@ -32,6 +35,14 @@ const Wordbooks = () => {
       setIsLoading(true);
       const books = await db.getAllWordbooks();
       setWordbooks(books);
+      
+      // Load card counts
+      const counts: Record<string, number> = {};
+      for (const book of books) {
+        const cards = await db.getCardsByWordbook(book.id);
+        counts[book.id] = cards.length;
+      }
+      setCardCounts(counts);
     } catch (error) {
       console.error("Failed to load wordbooks:", error);
       toast.error("載入單詞書失敗");
@@ -91,9 +102,15 @@ const Wordbooks = () => {
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 p-6">
       <div className="mx-auto max-w-6xl space-y-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">單詞書</h1>
-            <p className="text-muted-foreground">管理你的單詞集合</p>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" onClick={() => navigate("/")}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              返回主頁
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold">單詞書</h1>
+              <p className="text-muted-foreground">管理你的單詞集合</p>
+            </div>
           </div>
           <Button className="gap-2" onClick={() => setIsCreateDialogOpen(true)}>
             <Plus className="h-4 w-4" />
@@ -123,6 +140,7 @@ const Wordbooks = () => {
               <Card
                 key={wordbook.id}
                 className="p-6 hover:shadow-lg transition-shadow cursor-pointer group relative"
+                onClick={() => navigate(`/wordbooks/${wordbook.id}`)}
               >
                 <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
                   <Button
@@ -144,8 +162,7 @@ const Wordbooks = () => {
                 )}
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">
-                    {/* Card count will be implemented later */}
-                    0 張卡片
+                    {cardCounts[wordbook.id] || 0} 張卡片
                   </span>
                 </div>
               </Card>
