@@ -17,6 +17,8 @@ const Statistics = () => {
   const navigate = useNavigate();
   const [errorCards, setErrorCards] = useState<ErrorCard[]>([]);
   const [todayCount, setTodayCount] = useState(0);
+  const [weeklyAverage, setWeeklyAverage] = useState(0);
+  const [streakDays, setStreakDays] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -67,6 +69,59 @@ const Statistics = () => {
       }
       setTodayCount(count);
       
+      // Calculate 7-day average accuracy
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      let totalCorrect = 0;
+      let totalShown = 0;
+      
+      for (const wordbook of allWordbooks) {
+        const cards = await db.getCardsByWordbook(wordbook.id);
+        for (const card of cards) {
+          const stats = await db.getCardStats(card.id);
+          if (stats?.last_reviewed_at) {
+            const reviewDate = new Date(stats.last_reviewed_at);
+            if (reviewDate >= sevenDaysAgo) {
+              totalCorrect += stats.correct_count || 0;
+              totalShown += stats.shown_count || 0;
+            }
+          }
+        }
+      }
+      
+      const average = totalShown > 0 ? Math.round((totalCorrect / totalShown) * 100) : 0;
+      setWeeklyAverage(average);
+      
+      // Calculate streak days
+      let streak = 0;
+      const checkDate = new Date();
+      checkDate.setHours(0, 0, 0, 0);
+      
+      while (true) {
+        let hasReviewOnDate = false;
+        for (const wordbook of allWordbooks) {
+          const cards = await db.getCardsByWordbook(wordbook.id);
+          for (const card of cards) {
+            const stats = await db.getCardStats(card.id);
+            if (stats?.last_reviewed_at) {
+              const reviewDate = new Date(stats.last_reviewed_at);
+              reviewDate.setHours(0, 0, 0, 0);
+              if (reviewDate.getTime() === checkDate.getTime()) {
+                hasReviewOnDate = true;
+                break;
+              }
+            }
+          }
+          if (hasReviewOnDate) break;
+        }
+        
+        if (!hasReviewOnDate) break;
+        streak++;
+        checkDate.setDate(checkDate.getDate() - 1);
+      }
+      
+      setStreakDays(streak);
+      
     } catch (error) {
       console.error("Failed to load statistics:", error);
     } finally {
@@ -78,9 +133,8 @@ const Statistics = () => {
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 p-6">
       <div className="mx-auto max-w-6xl space-y-6">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate("/")}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            返回主頁
+          <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
+            <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
             <h1 className="text-3xl font-bold">學習統計</h1>
@@ -108,7 +162,7 @@ const Statistics = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">7天平均</p>
-                <p className="text-2xl font-bold">85%</p>
+                <p className="text-2xl font-bold">{weeklyAverage}%</p>
               </div>
             </div>
           </Card>
@@ -120,7 +174,7 @@ const Statistics = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">連續天數</p>
-                <p className="text-2xl font-bold">5 天</p>
+                <p className="text-2xl font-bold">{streakDays} 天</p>
               </div>
             </div>
           </Card>

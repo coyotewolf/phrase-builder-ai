@@ -102,11 +102,10 @@ const Wordbooks = () => {
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 p-6">
       <div className="mx-auto max-w-6xl space-y-6">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => navigate("/")}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              返回主頁
-            </Button>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
             <div>
               <h1 className="text-3xl font-bold">單詞書</h1>
               <p className="text-muted-foreground">管理你的單詞集合</p>
