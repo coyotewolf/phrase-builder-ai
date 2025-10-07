@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Plus, ArrowLeft, Trash2, Upload, Sparkles } from "lucide-react";
+import { Plus, ArrowLeft, Trash2, Upload, Sparkles, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,7 @@ import { generateWordDetails } from "@/lib/gemini-api";
 import { parseCSV } from "@/lib/csv";
 import { toast } from "sonner";
 import { ApiKeyDialog } from "@/components/ApiKeyDialog";
+import { EditCardDialog } from "@/components/EditCardDialog";
 
 const WordbookDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -27,6 +28,8 @@ const WordbookDetail = () => {
   const [cards, setCards] = useState<VocabCard[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedCard, setSelectedCard] = useState<VocabCard | null>(null);
   const [newWord, setNewWord] = useState("");
   const [newDefinition, setNewDefinition] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -112,6 +115,24 @@ const WordbookDetail = () => {
       toast.error("生成失敗，請檢查 API 密鑰");
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleEditCard = (card: VocabCard) => {
+    setSelectedCard(card);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveCard = async (updates: Partial<VocabCard>) => {
+    if (!selectedCard) return;
+
+    try {
+      await db.updateCard(selectedCard.id, updates);
+      toast.success("卡片已更新");
+      loadData();
+    } catch (error) {
+      console.error("Failed to update card:", error);
+      toast.error("更新失敗");
     }
   };
 
@@ -236,7 +257,14 @@ const WordbookDetail = () => {
                 key={card.id}
                 className="p-6 hover:shadow-lg transition-shadow group relative"
               >
-                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleEditCard(card)}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -245,7 +273,7 @@ const WordbookDetail = () => {
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                 </div>
-                <h3 className="text-xl font-bold mb-2 pr-8">{card.headword}</h3>
+                <h3 className="text-xl font-bold mb-2 pr-16">{card.headword}</h3>
                 {card.phonetic && (
                   <p className="text-sm text-muted-foreground mb-2">
                     {card.phonetic}
@@ -323,6 +351,13 @@ const WordbookDetail = () => {
             await db.updateUserSettings({ gemini_api_key: apiKey });
             toast.success("API 密鑰已保存");
           }}
+        />
+
+        <EditCardDialog
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          card={selectedCard}
+          onSave={handleSaveCard}
         />
       </div>
     </div>

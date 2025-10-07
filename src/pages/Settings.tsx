@@ -10,6 +10,9 @@ import BottomNav from "@/components/BottomNav";
 import { DailyGoalDialog } from "@/components/DailyGoalDialog";
 import { ApiKeyDialog } from "@/components/ApiKeyDialog";
 import { ImportWordbooksDialog } from "@/components/ImportWordbooksDialog";
+import { DisplayDirectionDialog } from "@/components/DisplayDirectionDialog";
+import { TTSSettingsDialog } from "@/components/TTSSettingsDialog";
+import { StudyRemindersDialog } from "@/components/StudyRemindersDialog";
 
 const Settings = () => {
   const [settings, setSettings] = useState<UserSettingsType>({
@@ -22,6 +25,9 @@ const Settings = () => {
   const [isDailyGoalDialogOpen, setIsDailyGoalDialogOpen] = useState(false);
   const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [isDisplayDirectionDialogOpen, setIsDisplayDirectionDialogOpen] = useState(false);
+  const [isTTSDialogOpen, setIsTTSDialogOpen] = useState(false);
+  const [isRemindersDialogOpen, setIsRemindersDialogOpen] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -122,14 +128,20 @@ const Settings = () => {
           </Card>
 
           <Card className="p-4">
-            <button className="w-full flex items-center justify-between">
+            <button 
+              className="w-full flex items-center justify-between"
+              onClick={() => setIsDisplayDirectionDialogOpen(true)}
+            >
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-background rounded-lg">
                   <Globe className="h-5 w-5" />
                 </div>
                 <div className="text-left">
                   <p className="font-medium">Display Direction</p>
-                  <p className="text-sm text-muted-foreground">English → Chinese</p>
+                  <p className="text-sm text-muted-foreground">
+                    {settings.display_direction === 'zh-en' ? 'Chinese → English' : 
+                     settings.display_direction === 'random' ? 'Random' : 'English → Chinese'}
+                  </p>
                 </div>
               </div>
               <ChevronRight className="h-5 w-5 text-muted-foreground" />
@@ -137,14 +149,19 @@ const Settings = () => {
           </Card>
 
           <Card className="p-4">
-            <button className="w-full flex items-center justify-between">
+            <button 
+              className="w-full flex items-center justify-between"
+              onClick={() => setIsTTSDialogOpen(true)}
+            >
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-background rounded-lg">
                   <Volume2 className="h-5 w-5" />
                 </div>
                 <div className="text-left">
                   <p className="font-medium">Text-to-Speech</p>
-                  <p className="text-sm text-muted-foreground">Voice pronunciation settings</p>
+                  <p className="text-sm text-muted-foreground">
+                    {settings.tts_enabled ? 'Enabled' : 'Disabled'} • {settings.tts_voice === 'en-GB' ? 'British' : 'American'}
+                  </p>
                 </div>
               </div>
               <ChevronRight className="h-5 w-5 text-muted-foreground" />
@@ -157,21 +174,23 @@ const Settings = () => {
           <h2 className="text-sm font-semibold text-muted-foreground">Notifications</h2>
           
           <Card className="p-4">
-            <div className="flex items-center justify-between">
+            <button 
+              className="w-full flex items-center justify-between"
+              onClick={() => setIsRemindersDialogOpen(true)}
+            >
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-background rounded-lg">
                   <Bell className="h-5 w-5" />
                 </div>
                 <div className="text-left">
                   <p className="font-medium">Study Reminders</p>
-                  <p className="text-sm text-muted-foreground">Get notified when it's time to study</p>
+                  <p className="text-sm text-muted-foreground">
+                    {settings.reminder_enabled ? `Enabled at ${settings.reminder_time}` : 'Not enabled'}
+                  </p>
                 </div>
               </div>
-              <Switch
-                checked={false}
-                onCheckedChange={() => {}}
-              />
-            </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+            </button>
           </Card>
         </div>
 
@@ -287,6 +306,48 @@ const Settings = () => {
         onSuccess={() => {
           toast.success("單詞書導入成功");
           loadSettings();
+        }}
+      />
+
+      <DisplayDirectionDialog
+        open={isDisplayDirectionDialogOpen}
+        onOpenChange={setIsDisplayDirectionDialogOpen}
+        currentDirection={settings.display_direction}
+        onSave={(direction) => updateSettings({ display_direction: direction })}
+      />
+
+      <TTSSettingsDialog
+        open={isTTSDialogOpen}
+        onOpenChange={setIsTTSDialogOpen}
+        currentSettings={{
+          enabled: settings.tts_enabled,
+          voice: settings.tts_voice || 'en-US',
+          autoPlay: settings.tts_auto_play || false,
+        }}
+        onSave={(ttsSettings) => updateSettings({
+          tts_enabled: ttsSettings.enabled,
+          tts_voice: ttsSettings.voice,
+          tts_auto_play: ttsSettings.autoPlay,
+        })}
+      />
+
+      <StudyRemindersDialog
+        open={isRemindersDialogOpen}
+        onOpenChange={setIsRemindersDialogOpen}
+        currentSettings={{
+          enabled: settings.reminder_enabled || false,
+          time: settings.reminder_time || '09:00',
+          days: settings.reminder_days || [],
+        }}
+        onSave={(reminderSettings) => {
+          updateSettings({
+            reminder_enabled: reminderSettings.enabled,
+            reminder_time: reminderSettings.time,
+            reminder_days: reminderSettings.days,
+          });
+          if (reminderSettings.enabled && 'Notification' in window) {
+            Notification.requestPermission();
+          }
         }}
       />
 

@@ -71,6 +71,12 @@ export interface UserSettings {
   daily_goal: number;
   theme: 'light' | 'dark' | 'system';
   tts_enabled: boolean;
+  tts_voice?: string;
+  tts_auto_play?: boolean;
+  display_direction?: string;
+  reminder_enabled?: boolean;
+  reminder_time?: string;
+  reminder_days?: string[];
   gemini_api_key?: string;
 }
 

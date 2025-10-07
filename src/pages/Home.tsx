@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Menu, Bell, Clock, TrendingUp, Zap, Play, Flame, BookText, Target } from "lucide-react";
 import { db } from "@/lib/db";
 import BottomNav from "@/components/BottomNav";
+import { SideMenu } from "@/components/SideMenu";
+import { NotificationsSheet } from "@/components/NotificationsSheet";
 
 const Home = () => {
   const navigate = useNavigate();
@@ -13,6 +15,8 @@ const Home = () => {
   const [dailyGoal, setDailyGoal] = useState(100);
   const [totalWords, setTotalWords] = useState(0);
   const [streakDays, setStreakDays] = useState(0);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
   useEffect(() => {
     loadStats();
@@ -99,10 +103,20 @@ const Home = () => {
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
       <div className="flex items-center justify-between p-4">
-        <Button variant="ghost" size="icon" className="rounded-2xl">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="rounded-2xl"
+          onClick={() => setIsMenuOpen(true)}
+        >
           <Menu className="h-5 w-5" />
         </Button>
-        <Button variant="ghost" size="icon" className="rounded-2xl">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="rounded-2xl"
+          onClick={() => setIsNotificationsOpen(true)}
+        >
           <Bell className="h-5 w-5" />
         </Button>
       </div>
@@ -193,30 +207,32 @@ const Home = () => {
                 <div className="flex items-center justify-center">
                   <Flame className="h-5 w-5 text-destructive mr-1" />
                 </div>
-                <p className="text-4xl font-bold">{streakDays}</p>
-                <p className="text-sm text-muted-foreground">Day Streak</p>
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex items-center justify-center">
-                  <BookText className="h-5 w-5 text-primary mr-1" />
+                  <p className="text-4xl font-bold">{streakDays}</p>
+                  <p className="text-sm text-muted-foreground">Day Streak</p>
                 </div>
-                <p className="text-4xl font-bold">{String(totalWords).padStart(6, '0')}</p>
-                <p className="text-sm text-muted-foreground">Total Words</p>
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex items-center justify-center">
-                  <Target className="h-5 w-5 text-accent mr-1" />
+                
+                <div className="space-y-2">
+                  <div className="flex items-center justify-center">
+                    <BookText className="h-5 w-5 text-primary mr-1" />
+                  </div>
+                  <p className="text-4xl font-bold">{totalWords}</p>
+                  <p className="text-sm text-muted-foreground">Total Words</p>
                 </div>
-                <p className="text-4xl font-bold">{String(dueCount).padStart(6, '0')}</p>
-                <p className="text-sm text-muted-foreground">Due Today</p>
-              </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center justify-center">
+                    <Target className="h-5 w-5 text-accent mr-1" />
+                  </div>
+                  <p className="text-4xl font-bold">{dueCount}</p>
+                  <p className="text-sm text-muted-foreground">Due Today</p>
+                </div>
             </div>
           </Card>
         </div>
       </div>
 
+      <SideMenu open={isMenuOpen} onOpenChange={setIsMenuOpen} />
+      <NotificationsSheet open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen} />
       <BottomNav />
     </div>
   );
