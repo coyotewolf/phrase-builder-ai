@@ -114,7 +114,7 @@ const Review = () => {
       const stats = await db.getCardStats(card.id);
       await db.createOrUpdateCardStats(card.id, {
         shown_count: (stats?.shown_count || 0) + 1,
-        correct_count: correct ? (stats?.correct_count || 0) + 1 : (stats?.correct_count || 0),
+        right_count: correct ? (stats?.right_count || 0) + 1 : (stats?.right_count || 0),
         wrong_count: correct ? (stats?.wrong_count || 0) : (stats?.wrong_count || 0) + 1,
         last_reviewed_at: new Date().toISOString(),
       });
@@ -177,9 +177,9 @@ const Review = () => {
           <div className="space-y-6">
             <div className="flex items-start justify-between">
             <div className="flex-1">
-                <h2 className="text-3xl font-bold mb-2">{currentCard.word}</h2>
-                {showAnswer && currentCard.pronunciation && (
-                  <p className="text-muted-foreground">{currentCard.pronunciation}</p>
+                <h2 className="text-3xl font-bold mb-2">{currentCard.headword}</h2>
+                {showAnswer && currentCard.phonetic && (
+                  <p className="text-muted-foreground">{currentCard.phonetic}</p>
                 )}
               </div>
               <div className="flex gap-2">
@@ -191,30 +191,32 @@ const Review = () => {
 
             {showAnswer && (
               <div className="space-y-4 animate-in fade-in duration-300">
-                {currentCard.definition && (
+                {(currentCard.meaning_zh || currentCard.meaning_en) && (
                   <div>
                     <h3 className="font-semibold mb-2">釋義</h3>
-                    <p className="text-muted-foreground">{currentCard.definition}</p>
+                    <p className="text-muted-foreground">
+                      {currentCard.meaning_zh || currentCard.meaning_en}
+                    </p>
                   </div>
                 )}
-                {currentCard.examples && currentCard.examples.length > 0 && (
+                {currentCard.detail?.examples && currentCard.detail.examples.length > 0 && (
                   <div>
                     <h3 className="font-semibold mb-2">例句</h3>
-                    {currentCard.examples.map((example, idx) => (
+                    {currentCard.detail.examples.map((example, idx) => (
                       <p key={idx} className="text-muted-foreground italic mb-1">{example}</p>
                     ))}
                   </div>
                 )}
-                {(currentCard.synonyms && currentCard.synonyms.length > 0) && (
+                {currentCard.detail?.synonyms && currentCard.detail.synonyms.length > 0 && (
                   <div>
                     <h3 className="font-semibold mb-2">同義詞</h3>
-                    <p className="text-muted-foreground">{currentCard.synonyms.join(", ")}</p>
+                    <p className="text-muted-foreground">{currentCard.detail.synonyms.join(", ")}</p>
                   </div>
                 )}
-                {(currentCard.antonyms && currentCard.antonyms.length > 0) && (
+                {currentCard.detail?.antonyms && currentCard.detail.antonyms.length > 0 && (
                   <div>
                     <h3 className="font-semibold mb-2">反義詞</h3>
-                    <p className="text-muted-foreground">{currentCard.antonyms.join(", ")}</p>
+                    <p className="text-muted-foreground">{currentCard.detail.antonyms.join(", ")}</p>
                   </div>
                 )}
               </div>

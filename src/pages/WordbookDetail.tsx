@@ -65,8 +65,10 @@ const WordbookDetail = () => {
     try {
       await db.createCard({
         wordbook_id: id,
-        word: newWord,
-        definition: newDefinition || undefined,
+        headword: newWord,
+        meaning_zh: newDefinition || undefined,
+        star: false,
+        tags: [],
       });
       
       toast.success("單字卡已新增");
@@ -95,10 +97,13 @@ const WordbookDetail = () => {
 
     try {
       setIsGenerating(true);
-      const details = await generateWordDetails([newWord], settings.gemini_api_key);
+      const details = await generateWordDetails(
+        { words: [newWord], level: 'TOEFL' },
+        settings.gemini_api_key
+      );
       
       if (details && details.length > 0) {
-        setNewDefinition(details[0].definition || "");
+        setNewDefinition(details[0].definition_en || "");
       }
       
       toast.success("已生成單字詳情");
@@ -134,9 +139,18 @@ const WordbookDetail = () => {
       for (const csvCard of csvCards) {
         await db.createCard({
           wordbook_id: id,
-          word: csvCard.headword,
-          definition: csvCard.meaning_zh || csvCard.meaning_en,
-          pronunciation: csvCard.ipa,
+          headword: csvCard.headword,
+          meaning_zh: csvCard.meaning_zh,
+          meaning_en: csvCard.meaning_en,
+          phonetic: csvCard.ipa,
+          star: false,
+          tags: [],
+          detail: {
+            synonyms: [],
+            antonyms: [],
+            examples: [],
+            ipa: csvCard.ipa,
+          },
         });
       }
       
@@ -231,15 +245,20 @@ const WordbookDetail = () => {
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                 </div>
-                <h3 className="text-xl font-bold mb-2 pr-8">{card.word}</h3>
-                {card.pronunciation && (
+                <h3 className="text-xl font-bold mb-2 pr-8">{card.headword}</h3>
+                {card.phonetic && (
                   <p className="text-sm text-muted-foreground mb-2">
-                    {card.pronunciation}
+                    {card.phonetic}
                   </p>
                 )}
-                {card.definition && (
+                {card.meaning_zh && (
                   <p className="text-sm text-muted-foreground line-clamp-3">
-                    {card.definition}
+                    {card.meaning_zh}
+                  </p>
+                )}
+                {card.meaning_en && (
+                  <p className="text-sm text-muted-foreground line-clamp-2">
+                    {card.meaning_en}
                   </p>
                 )}
               </Card>

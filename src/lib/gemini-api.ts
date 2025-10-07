@@ -3,22 +3,38 @@
  */
 
 export interface WordDetail {
-  word: string;
-  definition: string;
-  examples: string[];
+  headword: string;
+  part_of_speech?: string;
+  definition_en: string;
   synonyms: string[];
   antonyms: string[];
-  pronunciation: string;
+  examples: string[];
+  ipa?: string;
+  register?: string;
+  notes?: string;
+}
+
+export interface AIRequestParams {
+  level?: string;
+  words: string[];
+  limits?: {
+    synonyms?: number;
+    antonyms?: number;
+    examples?: number;
+  };
+  constraints?: string;
 }
 
 export async function generateWordDetails(
-  words: string[],
-  apiKey: string,
-  level: string = 'intermediate',
-  maxExamples: number = 3,
-  maxSynonyms: number = 5,
-  maxAntonyms: number = 3
+  params: AIRequestParams,
+  apiKey: string
 ): Promise<WordDetail[]> {
+  const {
+    words,
+    level = 'TOEFL',
+    limits = { synonyms: 6, antonyms: 6, examples: 3 },
+    constraints = 'natural usage, exam-appropriate, no rare proper nouns'
+  } = params;
   if (!apiKey) {
     throw new Error('Gemini API key is required');
   }
@@ -27,31 +43,41 @@ export async function generateWordDetails(
 
 Words: ${words.join(', ')}
 
+Constraints: ${constraints}
+
 For each word, provide:
-1. A clear and concise definition
-2. Up to ${maxExamples} example sentences showing the word in context
-3. Up to ${maxSynonyms} synonyms
-4. Up to ${maxAntonyms} antonyms (if applicable)
-5. Pronunciation in IPA format
+1. Part of speech
+2. Clear English definition
+3. Up to ${limits.examples} example sentences
+4. Up to ${limits.synonyms} synonyms
+5. Up to ${limits.antonyms} antonyms (if applicable)
+6. IPA pronunciation
+7. Register/formality level (e.g., formal, informal, academic)
+8. Any important usage notes
 
 Return ONLY a valid JSON array with this exact structure:
 [
   {
-    "word": "example",
-    "definition": "a thing characteristic of its kind",
-    "examples": ["This is an example sentence.", "Another example here."],
-    "synonyms": ["sample", "instance", "illustration"],
-    "antonyms": ["exception", "rule"],
-    "pronunciation": "/ɪɡˈzæmpəl/"
+    "headword": "rescind",
+    "part_of_speech": "verb",
+    "definition_en": "to cancel or repeal officially",
+    "synonyms": ["revoke", "repeal", "annul"],
+    "antonyms": ["enact", "authorize"],
+    "examples": ["The board voted to rescind the policy.", "They rescinded his offer after the background check."],
+    "ipa": "/rɪˈsɪnd/",
+    "register": "formal",
+    "notes": "Often used in legal or official contexts"
   }
 ]
 
 Important:
-- Return ONLY the JSON array, no additional text
+- Return ONLY the JSON array, no additional text or markdown
 - Include all ${words.length} words in the response
 - Keep definitions clear and appropriate for ${level} learners
-- Provide practical, real-world example sentences
-- If a word has no common antonyms, use an empty array`;
+- Provide practical example sentences
+- If a word has no common antonyms, use an empty array
+- Include register information (formal/informal/neutral/academic)
+- Add usage notes if relevant`;
 
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
@@ -74,7 +100,7 @@ Important:
           temperature: 0.7,
           topK: 40,
           topP: 0.95,
-          maxOutputTokens: 2048,
+          maxOutputTokens: 4096,
         },
       }),
     }

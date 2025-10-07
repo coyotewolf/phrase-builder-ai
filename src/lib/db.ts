@@ -13,21 +13,46 @@ export interface Wordbook {
 export interface Card {
   id: string;
   wordbook_id: string;
-  word: string;
-  definition?: string;
-  examples?: string[];
-  synonyms?: string[];
-  antonyms?: string[];
-  pronunciation?: string;
+  headword: string;
+  phonetic?: string;
+  part_of_speech?: string;
+  meaning_zh?: string;
+  meaning_en?: string;
+  notes?: string;
+  star: boolean;
+  image_uri?: string;
+  detail?: {
+    synonyms: string[];
+    antonyms: string[];
+    examples: string[];
+    level?: string;
+    ipa?: string;
+  };
+  tags: string[];
   created_at: string;
   updated_at: string;
+}
+
+// Combined card with stats and SRS for app usage
+export interface CardWithDetails extends Card {
+  stats: {
+    shown_count: number;
+    wrong_count: number;
+    right_count: number;
+  };
+  srs: {
+    due_at: string;
+    interval_days: number;
+    ease: number;
+    repetitions: number;
+  };
 }
 
 export interface CardStats {
   id: string;
   card_id: string;
   shown_count: number;
-  correct_count: number;
+  right_count: number;
   wrong_count: number;
   last_reviewed_at?: string;
 }
@@ -78,7 +103,7 @@ class VocabularyDB {
         if (!db.objectStoreNames.contains('cards')) {
           const cardStore = db.createObjectStore('cards', { keyPath: 'id' });
           cardStore.createIndex('wordbook_id', 'wordbook_id');
-          cardStore.createIndex('word', 'word');
+          cardStore.createIndex('headword', 'headword');
         }
 
         // Card stats store
@@ -196,6 +221,8 @@ class VocabularyDB {
     const now = new Date().toISOString();
     const newCard: Card = {
       id: crypto.randomUUID(),
+      star: false,
+      tags: [],
       ...card,
       created_at: now,
       updated_at: now,
@@ -256,7 +283,7 @@ class VocabularyDB {
           id: crypto.randomUUID(),
           card_id: cardId,
           shown_count: 0,
-          correct_count: 0,
+          right_count: 0,
           wrong_count: 0,
           ...updates,
         };

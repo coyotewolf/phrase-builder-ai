@@ -82,7 +82,7 @@ const Statistics = () => {
           if (stats?.last_reviewed_at) {
             const reviewDate = new Date(stats.last_reviewed_at);
             if (reviewDate >= sevenDaysAgo) {
-              totalCorrect += stats.correct_count || 0;
+              totalCorrect += stats.right_count || 0;
               totalShown += stats.shown_count || 0;
             }
           }
@@ -196,10 +196,10 @@ const Statistics = () => {
                   className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
                 >
                   <div className="flex-1">
-                    <p className="font-medium">{card.word}</p>
-                    {card.definition && (
+                    <p className="font-medium">{card.headword}</p>
+                    {(card.meaning_zh || card.meaning_en) && (
                       <p className="text-sm text-muted-foreground">
-                        {card.definition}
+                        {card.meaning_zh || card.meaning_en}
                       </p>
                     )}
                     <p className="text-xs text-muted-foreground mt-1">
