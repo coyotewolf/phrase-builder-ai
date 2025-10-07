@@ -1,12 +1,15 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, Target, Globe, Volume2, Bell, Upload, Download, Info } from "lucide-react";
+import { ChevronRight, Target, Globe, Volume2, Bell, Upload, Download, Info, Key } from "lucide-react";
 import { db, UserSettings as UserSettingsType } from "@/lib/db";
 import { toast } from "sonner";
 import BottomNav from "@/components/BottomNav";
+import { DailyGoalDialog } from "@/components/DailyGoalDialog";
+import { ApiKeyDialog } from "@/components/ApiKeyDialog";
+import { ImportWordbooksDialog } from "@/components/ImportWordbooksDialog";
 
 const Settings = () => {
   const [settings, setSettings] = useState<UserSettingsType>({
@@ -16,6 +19,9 @@ const Settings = () => {
     tts_enabled: true,
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [isDailyGoalDialogOpen, setIsDailyGoalDialogOpen] = useState(false);
+  const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -98,7 +104,10 @@ const Settings = () => {
           <h2 className="text-sm font-semibold text-muted-foreground">Study</h2>
           
           <Card className="p-4">
-            <button className="w-full flex items-center justify-between">
+            <button
+              className="w-full flex items-center justify-between"
+              onClick={() => setIsDailyGoalDialogOpen(true)}
+            >
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-background rounded-lg">
                   <Target className="h-5 w-5" />
@@ -166,12 +175,40 @@ const Settings = () => {
           </Card>
         </div>
 
+        {/* AI API Section */}
+        <div className="space-y-3">
+          <h2 className="text-sm font-semibold text-muted-foreground">AI API</h2>
+          
+          <Card className="p-4">
+            <button
+              className="w-full flex items-center justify-between"
+              onClick={() => setIsApiKeyDialogOpen(true)}
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-background rounded-lg">
+                  <Key className="h-5 w-5" />
+                </div>
+                <div className="text-left">
+                  <p className="font-medium">Gemini API Key</p>
+                  <p className="text-sm text-muted-foreground">
+                    {settings.gemini_api_key ? "Configured" : "Not configured"}
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+            </button>
+          </Card>
+        </div>
+
         {/* Data Section */}
         <div className="space-y-3">
           <h2 className="text-sm font-semibold text-muted-foreground">Data</h2>
           
           <Card className="p-4">
-            <button className="w-full flex items-center justify-between">
+            <button
+              className="w-full flex items-center justify-between"
+              onClick={() => setIsImportDialogOpen(true)}
+            >
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-background rounded-lg">
                   <Upload className="h-5 w-5" />
@@ -229,6 +266,29 @@ const Settings = () => {
           </p>
         </div>
       </div>
+
+      <DailyGoalDialog
+        open={isDailyGoalDialogOpen}
+        onOpenChange={setIsDailyGoalDialogOpen}
+        currentGoal={settings.daily_goal}
+        onSave={(goal) => updateSettings({ daily_goal: goal })}
+      />
+
+      <ApiKeyDialog
+        open={isApiKeyDialogOpen}
+        onOpenChange={setIsApiKeyDialogOpen}
+        currentApiKey={settings.gemini_api_key}
+        onSave={(apiKey) => updateSettings({ gemini_api_key: apiKey })}
+      />
+
+      <ImportWordbooksDialog
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
+        onSuccess={() => {
+          toast.success("單詞書導入成功");
+          loadSettings();
+        }}
+      />
 
       <BottomNav />
     </div>

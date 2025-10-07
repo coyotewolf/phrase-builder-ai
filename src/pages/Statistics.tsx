@@ -141,6 +141,67 @@ const Statistics = () => {
       }
       
       setStreakDays(streak);
+
+      // Calculate weekly progress (last 7 days)
+      const progressData: number[] = [];
+      for (let i = 6; i >= 0; i--) {
+        const checkDate = new Date();
+        checkDate.setDate(checkDate.getDate() - i);
+        checkDate.setHours(0, 0, 0, 0);
+        
+        let dayCount = 0;
+        for (const wordbook of allWordbooks) {
+          const cards = await db.getCardsByWordbook(wordbook.id);
+          for (const card of cards) {
+            const stats = await db.getCardStats(card.id);
+            if (stats?.last_reviewed_at) {
+              const reviewDate = new Date(stats.last_reviewed_at);
+              reviewDate.setHours(0, 0, 0, 0);
+              if (reviewDate.getTime() === checkDate.getTime()) {
+                dayCount++;
+              }
+            }
+          }
+        }
+        progressData.push(dayCount);
+      }
+      setWeeklyProgress(progressData);
+
+      // Calculate progress by level
+      const levelStats: Record<string, { current: number; total: number }> = {
+        Beginner: { current: 0, total: 0 },
+        Intermediate: { current: 0, total: 0 },
+        Advanced: { current: 0, total: 0 },
+      };
+
+      for (const wordbook of allWordbooks) {
+        const cards = await db.getCardsByWordbook(wordbook.id);
+        for (const card of cards) {
+          const level = card.detail?.level || "Beginner";
+          const normalizedLevel = level.includes("TOEFL") || level.includes("IELTS") 
+            ? "Advanced" 
+            : level.includes("intermediate") 
+            ? "Intermediate" 
+            : "Beginner";
+
+          if (levelStats[normalizedLevel]) {
+            levelStats[normalizedLevel].total++;
+            const stats = await db.getCardStats(card.id);
+            if (stats && stats.right_count > stats.wrong_count) {
+              levelStats[normalizedLevel].current++;
+            }
+          }
+        }
+      }
+
+      const levelProgress: ProgressByLevel[] = Object.entries(levelStats).map(([level, data]) => ({
+        level,
+        current: data.current,
+        total: data.total,
+        percentage: data.total > 0 ? Math.round((data.current / data.total) * 100) : 0,
+        color: level === "Beginner" ? "bg-teal" : level === "Intermediate" ? "bg-yellow" : "bg-destructive",
+      }));
+      setProgressByLevel(levelProgress);
       
     } catch (error) {
       console.error("Failed to load statistics:", error);
