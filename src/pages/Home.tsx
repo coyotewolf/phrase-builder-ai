@@ -2,16 +2,17 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { BookOpen, TrendingUp, Star, Shuffle, Calendar } from "lucide-react";
+import { Menu, Bell, Clock, TrendingUp, Zap, Play, Flame, BookText, Target } from "lucide-react";
 import { db } from "@/lib/db";
+import BottomNav from "@/components/BottomNav";
 
 const Home = () => {
   const navigate = useNavigate();
   const [dueCount, setDueCount] = useState(0);
   const [todayCompleted, setTodayCompleted] = useState(0);
-  const [dailyGoal, setDailyGoal] = useState(20);
-  const progressPercentage = dailyGoal > 0 ? (todayCompleted / dailyGoal) * 100 : 0;
+  const [dailyGoal, setDailyGoal] = useState(100);
+  const [totalWords, setTotalWords] = useState(0);
+  const [streakDays, setStreakDays] = useState(0);
 
   useEffect(() => {
     loadStats();
@@ -19,23 +20,23 @@ const Home = () => {
 
   const loadStats = async () => {
     try {
-      // Get user settings for daily goal
       const settings = await db.getUserSettings();
       setDailyGoal(settings.daily_goal);
 
-      // Calculate due cards count
       const dueCards = await db.getDueCards();
       setDueCount(dueCards.length);
 
-      // Calculate today's completed count
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
       const allWordbooks = await db.getAllWordbooks();
       let count = 0;
+      let total = 0;
       
       for (const wordbook of allWordbooks) {
         const cards = await db.getCardsByWordbook(wordbook.id);
+        total += cards.length;
+        
         for (const card of cards) {
           const stats = await db.getCardStats(card.id);
           if (stats?.last_reviewed_at) {
@@ -49,167 +50,174 @@ const Home = () => {
       }
       
       setTodayCompleted(count);
+      setTotalWords(total);
+
+      // Calculate streak
+      let streak = 0;
+      const checkDate = new Date();
+      checkDate.setHours(0, 0, 0, 0);
+      
+      while (true) {
+        let hasReview = false;
+        for (const wordbook of allWordbooks) {
+          const cards = await db.getCardsByWordbook(wordbook.id);
+          for (const card of cards) {
+            const stats = await db.getCardStats(card.id);
+            if (stats?.last_reviewed_at) {
+              const reviewDate = new Date(stats.last_reviewed_at);
+              reviewDate.setHours(0, 0, 0, 0);
+              if (reviewDate.getTime() === checkDate.getTime()) {
+                hasReview = true;
+                break;
+              }
+            }
+          }
+          if (hasReview) break;
+        }
+        
+        if (!hasReview) break;
+        streak++;
+        checkDate.setDate(checkDate.getDate() - 1);
+      }
+      
+      setStreakDays(streak);
     } catch (error) {
       console.error("Failed to load stats:", error);
     }
   };
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning!";
+    if (hour < 18) return "Good afternoon!";
+    return "Good evening!";
+  };
+
+  const progressPercentage = dailyGoal > 0 ? Math.min((todayCompleted / dailyGoal) * 100, 100) : 0;
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 p-6">
-      <div className="mx-auto max-w-4xl space-y-8">
-        {/* Header */}
-        <div className="text-center space-y-2">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Vocabulary Flow
-          </h1>
-          <p className="text-muted-foreground">記住每個單字，流暢學習</p>
+    <div className="min-h-screen bg-background pb-20">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4">
+        <Button variant="ghost" size="icon" className="rounded-2xl">
+          <Menu className="h-5 w-5" />
+        </Button>
+        <Button variant="ghost" size="icon" className="rounded-2xl">
+          <Bell className="h-5 w-5" />
+        </Button>
+      </div>
+
+      <div className="px-6 space-y-6">
+        {/* Greeting */}
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold">{getGreeting()} 👋</h1>
+          <p className="text-muted-foreground">
+            Today's progress: {todayCompleted}/{dailyGoal} words
+          </p>
+          <div className="h-2 bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full bg-foreground transition-all duration-500"
+              style={{ width: `${progressPercentage}%` }}
+            />
+          </div>
         </div>
 
-        {/* Today's Progress */}
-        <Card className="p-6 bg-gradient-to-br from-card to-card/50 shadow-lg">
-          <div className="space-y-4">
+        {/* Start Learning */}
+        <div className="space-y-4">
+          <h2 className="text-2xl font-bold">Start Learning</h2>
+          
+          <Card
+            className="p-6 cursor-pointer hover:bg-muted/50 transition-colors"
+            onClick={() => navigate("/review?mode=due")}
+          >
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-primary" />
-                今日進度
-              </h2>
-              <Badge variant="secondary" className="text-lg px-3 py-1">
-                {todayCompleted} / {dailyGoal}
-              </Badge>
-            </div>
-            
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm text-muted-foreground">
-                <span>完成率</span>
-                <span>{progressPercentage.toFixed(0)}%</span>
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-background rounded-2xl">
+                  <Clock className="h-8 w-8" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold">Due Review</h3>
+                  <p className="text-muted-foreground">
+                    {String(dueCount).padStart(6, '0')} cards
+                  </p>
+                </div>
               </div>
-              <div className="h-3 bg-muted rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-500"
-                  style={{ width: `${progressPercentage}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        {/* Due Cards Alert */}
-        {dueCount > 0 && (
-          <Card className="p-6 border-2 border-primary/20 bg-primary/5">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <h3 className="text-lg font-semibold">今日待複習</h3>
-                <p className="text-sm text-muted-foreground">
-                  有 {dueCount} 張卡片等待複習
-                </p>
-              </div>
-              <Button
-                size="lg"
-                className="bg-gradient-to-r from-primary to-accent hover:opacity-90"
-                onClick={() => navigate("/review?mode=due")}
-              >
-                開始複習
-              </Button>
+              <Play className="h-6 w-6 text-muted-foreground" />
             </div>
           </Card>
-        )}
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card
-            className="p-6 cursor-pointer hover:shadow-xl transition-all hover:-translate-y-1 bg-gradient-to-br from-card to-secondary/20"
+            className="p-6 cursor-pointer hover:bg-muted/50 transition-colors"
             onClick={() => navigate("/review?mode=frequent-errors")}
           >
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-destructive/10 rounded-lg">
-                  <TrendingUp className="h-6 w-6 text-destructive" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-destructive/20 rounded-2xl">
+                  <TrendingUp className="h-8 w-8 text-destructive" />
                 </div>
                 <div>
-                  <h3 className="font-semibold">高頻常錯</h3>
-                  <p className="text-sm text-muted-foreground">複習最容易錯的單字</p>
+                  <h3 className="text-xl font-semibold">Common Errors</h3>
+                  <p className="text-muted-foreground">Practice mistakes</p>
                 </div>
               </div>
+              <Play className="h-6 w-6 text-muted-foreground" />
             </div>
           </Card>
 
           <Card
-            className="p-6 cursor-pointer hover:shadow-xl transition-all hover:-translate-y-1 bg-gradient-to-br from-card to-accent/20"
+            className="p-6 cursor-pointer hover:bg-muted/50 transition-colors"
             onClick={() => navigate("/review?mode=new")}
           >
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-accent/10 rounded-lg">
-                  <BookOpen className="h-6 w-6 text-accent" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-teal/20 rounded-2xl">
+                  <Zap className="h-8 w-8 text-teal" />
                 </div>
                 <div>
-                  <h3 className="font-semibold">新學單字</h3>
-                  <p className="text-sm text-muted-foreground">學習尚未掌握的單字</p>
+                  <h3 className="text-xl font-semibold">New Words</h3>
+                  <p className="text-muted-foreground">Learn something new</p>
                 </div>
               </div>
-            </div>
-          </Card>
-
-          <Card
-            className="p-6 cursor-pointer hover:shadow-xl transition-all hover:-translate-y-1 bg-gradient-to-br from-card to-primary/20"
-            onClick={() => navigate("/review?mode=starred")}
-          >
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-yellow-500/10 rounded-lg">
-                  <Star className="h-6 w-6 text-yellow-500" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">收藏單字</h3>
-                  <p className="text-sm text-muted-foreground">複習已收藏的單字</p>
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          <Card
-            className="p-6 cursor-pointer hover:shadow-xl transition-all hover:-translate-y-1 bg-gradient-to-br from-card to-success/20"
-            onClick={() => navigate("/review?mode=mixed")}
-          >
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-success/10 rounded-lg">
-                  <Shuffle className="h-6 w-6 text-success" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">混合模式</h3>
-                  <p className="text-sm text-muted-foreground">綜合各種單字類型</p>
-                </div>
-              </div>
+              <Play className="h-6 w-6 text-muted-foreground" />
             </div>
           </Card>
         </div>
 
-        {/* Bottom Navigation */}
-        <div className="flex justify-center gap-4">
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={() => navigate("/wordbooks")}
-          >
-            單詞書管理
-          </Button>
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={() => navigate("/statistics")}
-          >
-            學習統計
-          </Button>
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={() => navigate("/settings")}
-          >
-            設定
-          </Button>
+        {/* Your Progress */}
+        <div className="space-y-4">
+          <h2 className="text-2xl font-bold">Your Progress</h2>
+          
+          <Card className="p-6">
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="space-y-2">
+                <div className="flex items-center justify-center">
+                  <Flame className="h-5 w-5 text-destructive mr-1" />
+                </div>
+                <p className="text-4xl font-bold">{streakDays}</p>
+                <p className="text-sm text-muted-foreground">Day Streak</p>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex items-center justify-center">
+                  <BookText className="h-5 w-5 text-primary mr-1" />
+                </div>
+                <p className="text-4xl font-bold">{String(totalWords).padStart(6, '0')}</p>
+                <p className="text-sm text-muted-foreground">Total Words</p>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex items-center justify-center">
+                  <Target className="h-5 w-5 text-accent mr-1" />
+                </div>
+                <p className="text-4xl font-bold">{String(dueCount).padStart(6, '0')}</p>
+                <p className="text-sm text-muted-foreground">Due Today</p>
+              </div>
+            </div>
+          </Card>
         </div>
       </div>
+
+      <BottomNav />
     </div>
   );
 };

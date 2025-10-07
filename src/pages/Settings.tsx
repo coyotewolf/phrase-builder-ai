@@ -1,24 +1,20 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
-import { Download, Upload, Key, ArrowLeft } from "lucide-react";
+import { ChevronRight, Target, Globe, Volume2, Bell, Upload, Download, Info } from "lucide-react";
 import { db, UserSettings as UserSettingsType } from "@/lib/db";
-import { ApiKeyDialog } from "@/components/ApiKeyDialog";
 import { toast } from "sonner";
+import BottomNav from "@/components/BottomNav";
 
 const Settings = () => {
-  const navigate = useNavigate();
   const [settings, setSettings] = useState<UserSettingsType>({
     id: 'default',
-    daily_goal: 20,
-    theme: 'system',
+    daily_goal: 100,
+    theme: 'dark',
     tts_enabled: true,
   });
-  const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -49,22 +45,6 @@ const Settings = () => {
     }
   };
 
-  const handleThemeToggle = (checked: boolean) => {
-    updateSettings({ theme: checked ? 'dark' : 'light' });
-  };
-
-  const handleDailyGoalChange = (value: number[]) => {
-    updateSettings({ daily_goal: value[0] });
-  };
-
-  const handleTtsToggle = (checked: boolean) => {
-    updateSettings({ tts_enabled: checked });
-  };
-
-  const handleApiKeySave = (apiKey: string) => {
-    updateSettings({ gemini_api_key: apiKey });
-  };
-
   const handleExport = async () => {
     try {
       const data = await db.exportAllData();
@@ -93,7 +73,7 @@ const Settings = () => {
       await db.importAllData(text);
       toast.success("數據導入成功");
       loadSettings();
-      window.location.reload(); // Reload to reflect imported data
+      window.location.reload();
     } catch (error) {
       console.error("Failed to import data:", error);
       toast.error("導入數據失敗，請確認文件格式正確");
@@ -102,146 +82,155 @@ const Settings = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 p-6">
-        <div className="mx-auto max-w-3xl">
-          <p className="text-center text-muted-foreground">載入中...</p>
-        </div>
+      <div className="min-h-screen bg-background p-6">
+        <p className="text-center text-muted-foreground">載入中...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 p-6">
-      <div className="mx-auto max-w-3xl space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">設置</h1>
-            <p className="text-muted-foreground">個性化你的學習體驗</p>
-          </div>
+    <div className="min-h-screen bg-background pb-20">
+      <div className="p-6 space-y-6">
+        <h1 className="text-3xl font-bold">Settings</h1>
+
+        {/* Study Section */}
+        <div className="space-y-3">
+          <h2 className="text-sm font-semibold text-muted-foreground">Study</h2>
+          
+          <Card className="p-4">
+            <button className="w-full flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-background rounded-lg">
+                  <Target className="h-5 w-5" />
+                </div>
+                <div className="text-left">
+                  <p className="font-medium">Daily Goal</p>
+                  <p className="text-sm text-muted-foreground">{settings.daily_goal} words per day</p>
+                </div>
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+            </button>
+          </Card>
+
+          <Card className="p-4">
+            <button className="w-full flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-background rounded-lg">
+                  <Globe className="h-5 w-5" />
+                </div>
+                <div className="text-left">
+                  <p className="font-medium">Display Direction</p>
+                  <p className="text-sm text-muted-foreground">English → Chinese</p>
+                </div>
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+            </button>
+          </Card>
+
+          <Card className="p-4">
+            <button className="w-full flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-background rounded-lg">
+                  <Volume2 className="h-5 w-5" />
+                </div>
+                <div className="text-left">
+                  <p className="font-medium">Text-to-Speech</p>
+                  <p className="text-sm text-muted-foreground">Voice pronunciation settings</p>
+                </div>
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+            </button>
+          </Card>
         </div>
 
-        <Card className="p-6 space-y-6">
-          <div>
-            <h2 className="text-lg font-semibold mb-4">外觀</h2>
+        {/* Notifications Section */}
+        <div className="space-y-3">
+          <h2 className="text-sm font-semibold text-muted-foreground">Notifications</h2>
+          
+          <Card className="p-4">
             <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>深色模式</Label>
-                <p className="text-sm text-muted-foreground">
-                  切換應用主題
-                </p>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-background rounded-lg">
+                  <Bell className="h-5 w-5" />
+                </div>
+                <div className="text-left">
+                  <p className="font-medium">Study Reminders</p>
+                  <p className="text-sm text-muted-foreground">Get notified when it's time to study</p>
+                </div>
               </div>
               <Switch
-                checked={settings.theme === 'dark'}
-                onCheckedChange={handleThemeToggle}
+                checked={false}
+                onCheckedChange={() => {}}
               />
             </div>
-          </div>
+          </Card>
+        </div>
 
-          <div>
-            <h2 className="text-lg font-semibold mb-4">學習</h2>
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <Label>每日學習目標</Label>
-                <Slider
-                  value={[settings.daily_goal]}
-                  onValueChange={handleDailyGoalChange}
-                  max={100}
-                  step={5}
-                />
-                <p className="text-sm text-muted-foreground">
-                  每天學習 {settings.daily_goal} 張卡片
-                </p>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>語音朗讀</Label>
-                  <p className="text-sm text-muted-foreground">
-                    自動朗讀單詞發音
-                  </p>
+        {/* Data Section */}
+        <div className="space-y-3">
+          <h2 className="text-sm font-semibold text-muted-foreground">Data</h2>
+          
+          <Card className="p-4">
+            <button className="w-full flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-background rounded-lg">
+                  <Upload className="h-5 w-5" />
                 </div>
-                <Switch
-                  checked={settings.tts_enabled}
-                  onCheckedChange={handleTtsToggle}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <h2 className="text-lg font-semibold mb-4">AI 功能</h2>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Gemini API 密鑰</Label>
-                  <p className="text-sm text-muted-foreground">
-                    {settings.gemini_api_key
-                      ? "已配置（點擊更新）"
-                      : "未配置（點擊設置）"}
-                  </p>
+                <div className="text-left">
+                  <p className="font-medium">Import Wordbooks</p>
+                  <p className="text-sm text-muted-foreground">Import from CSV file</p>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsApiKeyDialogOpen(true)}
-                >
-                  <Key className="h-4 w-4 mr-2" />
-                  {settings.gemini_api_key ? "更新" : "設置"}
-                </Button>
               </div>
-            </div>
-          </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+            </button>
+          </Card>
 
-          <div>
-            <h2 className="text-lg font-semibold mb-4">數據管理</h2>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>導出數據</Label>
-                  <p className="text-sm text-muted-foreground">
-                    下載所有數據為 JSON 文件
-                  </p>
+          <Card className="p-4">
+            <button className="w-full flex items-center justify-between" onClick={handleExport}>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-background rounded-lg">
+                  <Download className="h-5 w-5" />
                 </div>
-                <Button variant="outline" size="sm" onClick={handleExport}>
-                  <Download className="h-4 w-4 mr-2" />
-                  導出
-                </Button>
+                <div className="text-left">
+                  <p className="font-medium">Export Data</p>
+                  <p className="text-sm text-muted-foreground">Backup your progress</p>
+                </div>
               </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+            </button>
+          </Card>
+        </div>
 
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>導入數據</Label>
-                  <p className="text-sm text-muted-foreground">
-                    從 JSON 文件恢復數據
-                  </p>
+        {/* About Section */}
+        <div className="space-y-3">
+          <h2 className="text-sm font-semibold text-muted-foreground">About</h2>
+          
+          <Card className="p-4">
+            <button className="w-full flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-background rounded-lg">
+                  <Info className="h-5 w-5" />
                 </div>
-                <Button variant="outline" size="sm" asChild>
-                  <label>
-                    <Upload className="h-4 w-4 mr-2" />
-                    導入
-                    <input
-                      type="file"
-                      accept=".json"
-                      className="hidden"
-                      onChange={handleImport}
-                    />
-                  </label>
-                </Button>
+                <div className="text-left">
+                  <p className="font-medium">Vocabulary Flow</p>
+                  <p className="text-sm text-muted-foreground">Version 1.0.0</p>
+                </div>
               </div>
-            </div>
-          </div>
-        </Card>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+            </button>
+          </Card>
+        </div>
+
+        {/* Footer Description */}
+        <div className="text-center space-y-2 py-6">
+          <h3 className="font-semibold">Vocabulary Flow</h3>
+          <p className="text-sm text-muted-foreground px-4">
+            Learn vocabulary efficiently with spaced repetition and AI-powered content generation.
+          </p>
+        </div>
       </div>
 
-      <ApiKeyDialog
-        open={isApiKeyDialogOpen}
-        onOpenChange={setIsApiKeyDialogOpen}
-        onSave={handleApiKeySave}
-        currentApiKey={settings.gemini_api_key}
-      />
+      <BottomNav />
     </div>
   );
 };

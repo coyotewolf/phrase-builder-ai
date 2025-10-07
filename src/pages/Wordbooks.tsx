@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, BookOpen, Trash2, ArrowLeft } from "lucide-react";
+import { Plus, BookOpen, MoreVertical, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,17 +14,28 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { db, Wordbook } from "@/lib/db";
 import { toast } from "sonner";
+import BottomNav from "@/components/BottomNav";
+
+interface WordbookWithStats extends Wordbook {
+  cardCount: number;
+  dueCount: number;
+}
 
 const Wordbooks = () => {
   const navigate = useNavigate();
-  const [wordbooks, setWordbooks] = useState<Wordbook[]>([]);
+  const [wordbooks, setWordbooks] = useState<WordbookWithStats[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newWordbookName, setNewWordbookName] = useState("");
   const [newWordbookDescription, setNewWordbookDescription] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [cardCounts, setCardCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     loadWordbooks();
@@ -34,15 +45,23 @@ const Wordbooks = () => {
     try {
       setIsLoading(true);
       const books = await db.getAllWordbooks();
-      setWordbooks(books);
       
-      // Load card counts
-      const counts: Record<string, number> = {};
-      for (const book of books) {
-        const cards = await db.getCardsByWordbook(book.id);
-        counts[book.id] = cards.length;
-      }
-      setCardCounts(counts);
+      const booksWithStats = await Promise.all(
+        books.map(async (book) => {
+          const cards = await db.getCardsByWordbook(book.id);
+          const allDueCards = await db.getDueCards();
+          const dueCardIds = new Set(allDueCards.map(srs => srs.card_id));
+          const bookDueCount = cards.filter(card => dueCardIds.has(card.id)).length;
+          
+          return {
+            ...book,
+            cardCount: cards.length,
+            dueCount: bookDueCount,
+          };
+        })
+      );
+      
+      setWordbooks(booksWithStats);
     } catch (error) {
       console.error("Failed to load wordbooks:", error);
       toast.error("載入單詞書失敗");
@@ -89,31 +108,17 @@ const Wordbooks = () => {
     }
   };
 
-  const getCardCount = async (wordbookId: string): Promise<number> => {
-    try {
-      const cards = await db.getCardsByWordbook(wordbookId);
-      return cards.length;
-    } catch {
-      return 0;
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 p-6">
-      <div className="mx-auto max-w-6xl space-y-6">
+    <div className="min-h-screen bg-background pb-20">
+      <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-            <div>
-              <h1 className="text-3xl font-bold">單詞書</h1>
-              <p className="text-muted-foreground">管理你的單詞集合</p>
-            </div>
-          </div>
-          <Button className="gap-2" onClick={() => setIsCreateDialogOpen(true)}>
-            <Plus className="h-4 w-4" />
-            新增單詞書
+          <h1 className="text-3xl font-bold">Wordbooks</h1>
+          <Button
+            size="icon"
+            className="rounded-2xl"
+            onClick={() => setIsCreateDialogOpen(true)}
+          >
+            <Plus className="h-5 w-5" />
           </Button>
         </div>
 
@@ -134,35 +139,52 @@ const Wordbooks = () => {
             </Button>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="space-y-3">
             {wordbooks.map((wordbook) => (
               <Card
                 key={wordbook.id}
-                className="p-6 hover:shadow-lg transition-shadow cursor-pointer group relative"
+                className="p-6 cursor-pointer hover:bg-muted/50 transition-colors"
                 onClick={() => navigate(`/wordbooks/${wordbook.id}`)}
               >
-                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteWordbook(wordbook.id);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
-                <h3 className="text-lg font-semibold mb-2 pr-8">{wordbook.name}</h3>
-                {wordbook.description && (
-                  <p className="text-sm text-muted-foreground mb-4">
-                    {wordbook.description}
-                  </p>
-                )}
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">
-                    {cardCounts[wordbook.id] || 0} 張卡片
-                  </span>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 space-y-2">
+                    <h3 className="text-xl font-semibold">{wordbook.name}</h3>
+                    {wordbook.description && (
+                      <p className="text-sm text-muted-foreground">
+                        {wordbook.description}
+                      </p>
+                    )}
+                    <div className="flex items-center gap-4 text-sm">
+                      <span className="flex items-center gap-1 text-muted-foreground">
+                        <BookOpen className="h-4 w-4" />
+                        {wordbook.cardCount} cards
+                      </span>
+                      {wordbook.dueCount > 0 && (
+                        <span className="flex items-center gap-1 text-destructive">
+                          <Clock className="h-4 w-4" />
+                          {wordbook.dueCount} due
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                      <Button variant="ghost" size="icon">
+                        <MoreVertical className="h-5 w-5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        className="text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteWordbook(wordbook.id);
+                        }}
+                      >
+                        刪除
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </Card>
             ))}
@@ -209,6 +231,8 @@ const Wordbooks = () => {
           </DialogContent>
         </Dialog>
       </div>
+
+      <BottomNav />
     </div>
   );
 };

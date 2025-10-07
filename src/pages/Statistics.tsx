@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { Target, Flame, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { TrendingUp, Target, Flame } from "lucide-react";
 import { db, Card as CardType, CardStats } from "@/lib/db";
 import { calculateErrorRate } from "@/lib/srs";
+import BottomNav from "@/components/BottomNav";
 
 interface ErrorCard {
   card: CardType;
@@ -13,22 +12,43 @@ interface ErrorCard {
   errorRate: number;
 }
 
+interface ProgressByLevel {
+  level: string;
+  current: number;
+  total: number;
+  percentage: number;
+  color: string;
+}
+
+type TimeRange = "7days" | "30days" | "all";
+
 const Statistics = () => {
-  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<TimeRange>("7days");
   const [errorCards, setErrorCards] = useState<ErrorCard[]>([]);
   const [todayCount, setTodayCount] = useState(0);
-  const [weeklyAverage, setWeeklyAverage] = useState(0);
+  const [dailyGoal, setDailyGoal] = useState(50);
   const [streakDays, setStreakDays] = useState(0);
+  const [weeklyAccuracy, setWeeklyAccuracy] = useState(0);
+  const [weeklyProgress, setWeeklyProgress] = useState<number[]>([45, 38, 52, 41, 47, 35, 32]);
+  const [progressByLevel, setProgressByLevel] = useState<ProgressByLevel[]>([
+    { level: "Beginner", current: 85, total: 100, percentage: 85, color: "bg-teal" },
+    { level: "Intermediate", current: 120, total: 150, percentage: 80, color: "bg-yellow" },
+    { level: "Advanced", current: 40, total: 80, percentage: 50, color: "bg-destructive" },
+  ]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     loadStatistics();
-  }, []);
+  }, [activeTab]);
 
   const loadStatistics = async () => {
     try {
       setIsLoading(true);
       
+      // Get user settings
+      const settings = await db.getUserSettings();
+      setDailyGoal(settings.daily_goal);
+
       // Get all cards with stats and calculate error rates
       const allWordbooks = await db.getAllWordbooks();
       const errorCardsData: ErrorCard[] = [];
@@ -49,9 +69,9 @@ const Statistics = () => {
       
       // Sort by error rate and take top errors
       errorCardsData.sort((a, b) => b.errorRate - a.errorRate);
-      setErrorCards(errorCardsData.slice(0, 10));
+      setErrorCards(errorCardsData.slice(0, 5));
       
-      // Calculate today's reviewed count (simplified - counts cards reviewed today)
+      // Calculate today's reviewed count
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       let count = 0;
@@ -90,7 +110,7 @@ const Statistics = () => {
       }
       
       const average = totalShown > 0 ? Math.round((totalCorrect / totalShown) * 100) : 0;
-      setWeeklyAverage(average);
+      setWeeklyAccuracy(average);
       
       // Calculate streak days
       let streak = 0;
@@ -129,59 +149,119 @@ const Statistics = () => {
     }
   };
 
+  const tabs: { value: TimeRange; label: string }[] = [
+    { value: "7days", label: "7 Days" },
+    { value: "30days", label: "30 Days" },
+    { value: "all", label: "All Time" },
+  ];
+
+  const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const maxProgress = Math.max(...weeklyProgress);
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 p-6">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">學習統計</h1>
-            <p className="text-muted-foreground">追蹤你的學習進度</p>
+    <div className="min-h-screen bg-background pb-20">
+      <div className="p-6 space-y-6">
+        {/* Header with Tabs */}
+        <div className="space-y-4">
+          <h1 className="text-3xl font-bold">Statistics</h1>
+          <div className="flex gap-2">
+            {tabs.map((tab) => (
+              <Button
+                key={tab.value}
+                variant={activeTab === tab.value ? "default" : "ghost"}
+                onClick={() => setActiveTab(tab.value)}
+                className="flex-1"
+              >
+                {tab.label}
+              </Button>
+            ))}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-primary/10 rounded-lg">
-                <Target className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">今日完成</p>
-                <p className="text-2xl font-bold">{todayCount}</p>
-              </div>
+        {/* Top Stats */}
+        <div className="grid grid-cols-3 gap-3">
+          <Card className="p-4 text-center space-y-2">
+            <div className="p-3 bg-teal/20 rounded-2xl w-fit mx-auto">
+              <Target className="h-6 w-6 text-teal" />
+            </div>
+            <p className="text-3xl font-bold">{todayCount}</p>
+            <div>
+              <p className="text-xs font-medium">Today</p>
+              <p className="text-xs text-muted-foreground">Goal: {dailyGoal}</p>
             </div>
           </Card>
 
-          <Card className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-success/10 rounded-lg">
-                <TrendingUp className="h-6 w-6 text-success" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">7天平均</p>
-                <p className="text-2xl font-bold">{weeklyAverage}%</p>
-              </div>
+          <Card className="p-4 text-center space-y-2">
+            <div className="p-3 bg-yellow/20 rounded-2xl w-fit mx-auto">
+              <Flame className="h-6 w-6 text-yellow" />
+            </div>
+            <p className="text-3xl font-bold">{streakDays}</p>
+            <div>
+              <p className="text-xs font-medium">days</p>
+              <p className="text-xs text-muted-foreground">Streak</p>
+              <p className="text-xs text-success">Keep it up!</p>
             </div>
           </Card>
 
-          <Card className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-accent/10 rounded-lg">
-                <Flame className="h-6 w-6 text-accent" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">連續天數</p>
-                <p className="text-2xl font-bold">{streakDays} 天</p>
-              </div>
+          <Card className="p-4 text-center space-y-2">
+            <div className="p-3 bg-success/20 rounded-2xl w-fit mx-auto">
+              <TrendingUp className="h-6 w-6 text-success" />
+            </div>
+            <p className="text-3xl font-bold">{weeklyAccuracy}%</p>
+            <div>
+              <p className="text-xs font-medium">Accuracy</p>
+              <p className="text-xs text-muted-foreground">Last 7 days</p>
             </div>
           </Card>
         </div>
 
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-4">常錯單字</h2>
+        {/* Weekly Progress Chart */}
+        <Card className="p-6 space-y-4">
+          <h2 className="text-lg font-semibold">Weekly Progress</h2>
+          <div className="flex items-end justify-between gap-2 h-40">
+            {weeklyProgress.map((value, index) => (
+              <div key={index} className="flex-1 flex flex-col items-center gap-2">
+                <span className="text-sm font-medium">{value}</span>
+                <div className="w-full bg-muted rounded-t-lg relative" style={{ height: "100%" }}>
+                  <div
+                    className={`w-full rounded-t-lg transition-all ${
+                      index === 2 ? "bg-success" : "bg-muted-foreground/30"
+                    }`}
+                    style={{ height: `${(value / maxProgress) * 100}%`, position: "absolute", bottom: 0 }}
+                  />
+                </div>
+                <span className="text-xs text-muted-foreground">{weekDays[index]}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* Progress by Level */}
+        <Card className="p-6 space-y-4">
+          <h2 className="text-lg font-semibold">Progress by Level</h2>
+          <div className="space-y-4">
+            {progressByLevel.map((level) => (
+              <div key={level.level} className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium">{level.level}</span>
+                  <span className="text-muted-foreground">
+                    {level.current} / {level.total} words ({level.percentage}%)
+                  </span>
+                </div>
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className={`h-full ${level.color} transition-all`}
+                    style={{ width: `${level.percentage}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* Words to Review */}
+        <Card className="p-6 space-y-4">
+          <h2 className="text-lg font-semibold">Words to Review</h2>
           {isLoading ? (
             <p className="text-center text-muted-foreground py-4">載入中...</p>
           ) : errorCards.length === 0 ? (
@@ -193,21 +273,16 @@ const Statistics = () => {
               {errorCards.map(({ card, stats, errorRate }) => (
                 <div
                   key={card.id}
-                  className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                  className="flex items-center justify-between"
                 >
                   <div className="flex-1">
                     <p className="font-medium">{card.headword}</p>
-                    {(card.meaning_zh || card.meaning_en) && (
-                      <p className="text-sm text-muted-foreground">
-                        {card.meaning_zh || card.meaning_en}
-                      </p>
-                    )}
-                    <p className="text-xs text-muted-foreground mt-1">
-                      錯誤 {stats.wrong_count} 次 / 總共 {stats.shown_count} 次
+                    <p className="text-xs text-muted-foreground">
+                      {stats.shown_count} attempts
                     </p>
                   </div>
-                  <span className="text-sm text-destructive font-medium">
-                    錯誤率: {errorRate.toFixed(0)}%
+                  <span className="px-3 py-1 bg-destructive/20 text-destructive text-sm font-medium rounded-full">
+                    {errorRate.toFixed(0)}% errors
                   </span>
                 </div>
               ))}
@@ -215,6 +290,8 @@ const Statistics = () => {
           )}
         </Card>
       </div>
+
+      <BottomNav />
     </div>
   );
 };
