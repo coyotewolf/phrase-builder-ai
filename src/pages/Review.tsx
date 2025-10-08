@@ -23,6 +23,7 @@ const Review = () => {
   const [loading, setLoading] = useState(true);
 
   const x = useMotionValue(0);
+  const y = useMotionValue(0);
   const rotate = useTransform(x, [-200, 0, 200], [-25, 0, 25]);
   const opacity = useTransform(x, [-200, -100, 0, 100, 200], [0, 1, 1, 1, 0]);
 
@@ -137,7 +138,11 @@ const Review = () => {
         setCurrentIndex(currentIndex + 1);
         setIsFlipped(false);
         setIsDetailOpen(false);
-        x.set(0);
+        // Reset motion values for next card
+        setTimeout(() => {
+          x.set(0);
+          y.set(0);
+        }, 100);
       } else {
         toast.success("複習完成！");
         navigate("/");
@@ -149,13 +154,32 @@ const Review = () => {
   };
 
   const handleDragEnd = (event: any, info: PanInfo) => {
-    const threshold = 100;
+    const swipeThreshold = 100;
+    const verticalThreshold = -80; // Negative because we're dragging up
     
-    if (Math.abs(info.offset.x) > threshold) {
-      const correct = info.offset.x > 0;
-      handleAnswer(correct);
-    } else {
+    // Check for vertical swipe (up)
+    if (info.offset.y < verticalThreshold && Math.abs(info.offset.x) < swipeThreshold) {
+      setIsDetailOpen(true);
       x.set(0);
+      y.set(0);
+      return;
+    }
+    
+    // Check for horizontal swipe (left/right)
+    if (Math.abs(info.offset.x) > swipeThreshold) {
+      const correct = info.offset.x > 0;
+      // Animate card off screen
+      const exitX = info.offset.x > 0 ? 500 : -500;
+      x.set(exitX);
+      
+      // Wait for animation then handle answer
+      setTimeout(() => {
+        handleAnswer(correct);
+      }, 200);
+    } else {
+      // Reset position if threshold not met
+      x.set(0);
+      y.set(0);
     }
   };
 
@@ -222,34 +246,63 @@ const Review = () => {
         </div>
       </div>
 
-      {/* Card Container */}
-      <div className="flex items-center justify-center px-4" style={{ height: "calc(100vh - 280px)" }}>
-        <motion.div
-          style={{
-            x,
-            rotate,
-            opacity,
-            cursor: "grab",
-          }}
-          drag="x"
-          dragConstraints={{ left: 0, right: 0 }}
-          onDragEnd={handleDragEnd}
-          whileTap={{ cursor: "grabbing" }}
-          className="w-full max-w-md"
-        >
-          <div
-            className="relative w-full h-[400px]"
-            style={{ perspective: "1000px" }}
-          >
-            <motion.div
-              className="absolute inset-0"
+      {/* Card Container with Stack Effect */}
+      <div className="flex items-center justify-center px-4 relative" style={{ height: "calc(100vh - 280px)" }}>
+        <div className="w-full max-w-md relative" style={{ height: "400px" }}>
+          {/* Next card (underneath) */}
+          {currentIndex < cards.length - 1 && (
+            <Card
+              className="absolute inset-0 shadow-xl"
               style={{
-                transformStyle: "preserve-3d",
+                transform: "scale(0.95) translateY(10px)",
+                opacity: 0.5,
+                zIndex: 0,
               }}
-              animate={{ rotateY: isFlipped ? 180 : 0 }}
-              transition={{ duration: 0.6 }}
-              onClick={() => setIsFlipped(!isFlipped)}
             >
+              <div className="h-full flex items-center justify-center p-8">
+                <h1 className="text-4xl sm:text-5xl font-bold text-center break-words opacity-30">
+                  {cards[currentIndex + 1].headword}
+                </h1>
+              </div>
+            </Card>
+          )}
+
+          {/* Current card (on top) */}
+          <motion.div
+            style={{
+              x,
+              y,
+              rotate,
+              opacity,
+              cursor: "grab",
+              position: "absolute",
+              inset: 0,
+              zIndex: 1,
+            }}
+            drag
+            dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+            dragElastic={0.2}
+            onDragEnd={handleDragEnd}
+            whileTap={{ cursor: "grabbing" }}
+          >
+            <div
+              className="relative w-full h-full"
+              style={{ perspective: "1000px" }}
+            >
+              <motion.div
+                className="absolute inset-0"
+                style={{
+                  transformStyle: "preserve-3d",
+                }}
+                animate={{ rotateY: isFlipped ? 180 : 0 }}
+                transition={{ duration: 0.6 }}
+                onClick={(e) => {
+                  // Only flip on click, not on drag
+                  if (Math.abs(x.get()) < 5 && Math.abs(y.get()) < 5) {
+                    setIsFlipped(!isFlipped);
+                  }
+                }}
+              >
               {/* Front Side - Word Only */}
               <Card
                 className="absolute inset-0 flex items-center justify-center p-8 shadow-2xl cursor-pointer backface-hidden"
@@ -284,25 +337,76 @@ const Review = () => {
               </Card>
             </motion.div>
           </div>
+        </motion.div>
 
-          {/* Tap to Flip Hint */}
-          {!isFlipped && (
-            <p className="text-center text-sm text-muted-foreground mt-4">
-              點擊卡片查看釋義
-            </p>
-          )}
+        </div>
+
+        {/* Swipe Indicators */}
+        <motion.div
+          className="absolute top-8 left-8 text-6xl font-bold text-destructive"
+          style={{
+            opacity: useTransform(x, [-100, 0], [1, 0]),
+          }}
+        >
+          ✗
+        </motion.div>
+        <motion.div
+          className="absolute top-8 right-8 text-6xl font-bold text-success"
+          style={{
+            opacity: useTransform(x, [0, 100], [0, 1]),
+          }}
+        >
+          ✓
+        </motion.div>
+        <motion.div
+          className="absolute bottom-8 left-0 right-0 text-center text-2xl font-bold text-primary"
+          style={{
+            opacity: useTransform(y, [-100, 0], [1, 0]),
+          }}
+        >
+          ↑ 詳細
         </motion.div>
       </div>
 
-      {/* Pull Up for Details Button */}
-      <div className="fixed bottom-4 left-0 right-0 flex justify-center">
+      {/* Tap to Flip Hint */}
+      {!isFlipped && (
+        <p className="text-center text-sm text-muted-foreground mt-4">
+          點擊卡片查看釋義 • 上滑查看詳細資訊
+        </p>
+      )}
+
+      {/* Manual action buttons (alternative to swipe) */}
+      <div className="fixed bottom-20 left-0 right-0 px-4 flex justify-center gap-4">
+        <Button
+          variant="destructive"
+          size="lg"
+          className="rounded-full w-16 h-16"
+          onClick={() => {
+            x.set(-500);
+            setTimeout(() => handleAnswer(false), 200);
+          }}
+        >
+          <span className="text-2xl">✗</span>
+        </Button>
         <Button
           variant="outline"
+          size="lg"
           className="rounded-full px-6"
           onClick={() => setIsDetailOpen(true)}
         >
           <ChevronUp className="h-4 w-4 mr-2" />
-          查看詳細資訊
+          詳細
+        </Button>
+        <Button
+          variant="default"
+          size="lg"
+          className="rounded-full w-16 h-16 bg-success hover:bg-success/90"
+          onClick={() => {
+            x.set(500);
+            setTimeout(() => handleAnswer(true), 200);
+          }}
+        >
+          <span className="text-2xl">✓</span>
         </Button>
       </div>
 
