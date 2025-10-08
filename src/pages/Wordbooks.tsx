@@ -22,6 +22,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -52,6 +62,8 @@ const Wordbooks = () => {
   const [sortBy, setSortBy] = useState<'name' | 'created' | 'errors'>('created');
   const [isReviewModeDialogOpen, setIsReviewModeDialogOpen] = useState(false);
   const [selectedWordbookForReview, setSelectedWordbookForReview] = useState<WordbookWithStats | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [wordbookToDelete, setWordbookToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     loadWordbooks();
@@ -134,14 +146,14 @@ const Wordbooks = () => {
     }
   };
 
-  const handleDeleteWordbook = async (id: string) => {
-    if (!confirm("確定要刪除這個單詞書嗎？此操作無法撤銷。")) {
-      return;
-    }
+  const handleDeleteWordbook = async () => {
+    if (!wordbookToDelete) return;
 
     try {
-      await db.deleteWordbook(id);
+      await db.deleteWordbook(wordbookToDelete);
       toast.success("單詞書已刪除");
+      setWordbookToDelete(null);
+      setIsDeleteDialogOpen(false);
       loadWordbooks();
     } catch (error) {
       console.error("Failed to delete wordbook:", error);
@@ -268,7 +280,8 @@ const Wordbooks = () => {
                           className="text-destructive"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleDeleteWordbook(wordbook.id);
+                            setWordbookToDelete(wordbook.id);
+                            setIsDeleteDialogOpen(true);
                           }}
                         >
                           刪除
@@ -365,6 +378,28 @@ const Wordbooks = () => {
           }}
           wordbookName={selectedWordbookForReview?.name || ""}
         />
+
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>確認刪除單詞書</AlertDialogTitle>
+              <AlertDialogDescription>
+                確定要刪除這個單詞書嗎？此操作無法撤銷，將會永久刪除該單詞書及其所有單字卡。
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setWordbookToDelete(null)}>
+                取消
+              </AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDeleteWordbook}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                確認刪除
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
 
       <BottomNav />

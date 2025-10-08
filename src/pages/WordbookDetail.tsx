@@ -16,6 +16,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -55,6 +65,9 @@ const WordbookDetail = () => {
   const [isReviewModeDialogOpen, setIsReviewModeDialogOpen] = useState(false);
   const [sortBy, setSortBy] = useState<'alphabet' | 'created' | 'errors'>('created');
   const [cardsWithStats, setCardsWithStats] = useState<Array<VocabCard & { errorCount: number }>>([]);
+  const [isDeleteCardDialogOpen, setIsDeleteCardDialogOpen] = useState(false);
+  const [cardToDelete, setCardToDelete] = useState<string | null>(null);
+  const [isBatchDeleteDialogOpen, setIsBatchDeleteDialogOpen] = useState(false);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const autoScrollInterval = useRef<NodeJS.Timeout | null>(null);
   const longPressedCardId = useRef<string | null>(null);
@@ -550,8 +563,6 @@ const WordbookDetail = () => {
 
   const handleBatchDelete = async () => {
     if (selectedCardIds.size === 0) return;
-    
-    if (!confirm(`確定要刪除選中的 ${selectedCardIds.size} 張單字卡嗎？`)) return;
 
     try {
       for (const cardId of selectedCardIds) {
@@ -560,6 +571,7 @@ const WordbookDetail = () => {
       toast.success(`已刪除 ${selectedCardIds.size} 張單字卡`);
       setSelectedCardIds(new Set());
       setIsSelectionMode(false);
+      setIsBatchDeleteDialogOpen(false);
       loadData();
     } catch (error) {
       console.error("Failed to delete cards:", error);
@@ -642,12 +654,14 @@ const WordbookDetail = () => {
     }
   };
 
-  const handleDeleteCard = async (cardId: string) => {
-    if (!confirm("確定要刪除這張卡片嗎？")) return;
+  const handleDeleteCard = async () => {
+    if (!cardToDelete) return;
 
     try {
-      await db.deleteCard(cardId);
+      await db.deleteCard(cardToDelete);
       toast.success("卡片已刪除");
+      setCardToDelete(null);
+      setIsDeleteCardDialogOpen(false);
       loadData();
     } catch (error) {
       console.error("Failed to delete card:", error);
@@ -907,7 +921,7 @@ const WordbookDetail = () => {
                     <Button
                       variant="destructive"
                       size="sm"
-                      onClick={handleBatchDelete}
+                      onClick={() => setIsBatchDeleteDialogOpen(true)}
                       disabled={selectedCardIds.size === 0}
                       className="flex-1 sm:flex-none"
                     >
@@ -1079,7 +1093,10 @@ const WordbookDetail = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDeleteCard(card.id)}
+                          onClick={() => {
+                            setCardToDelete(card.id);
+                            setIsDeleteCardDialogOpen(true);
+                          }}
                         >
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
@@ -1214,6 +1231,50 @@ const WordbookDetail = () => {
         onSelect={(mode) => navigate(`/review?mode=wordbook&wordbookId=${id}&order=${mode}`)}
         wordbookName={wordbook?.name || ""}
       />
+
+      <AlertDialog open={isDeleteCardDialogOpen} onOpenChange={setIsDeleteCardDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>確認刪除單字卡</AlertDialogTitle>
+            <AlertDialogDescription>
+              確定要刪除這張單字卡嗎？此操作無法撤銷。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setCardToDelete(null)}>
+              取消
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteCard}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              確認刪除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={isBatchDeleteDialogOpen} onOpenChange={setIsBatchDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>確認批量刪除</AlertDialogTitle>
+            <AlertDialogDescription>
+              確定要刪除選中的 {selectedCardIds.size} 張單字卡嗎？此操作無法撤銷。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>
+              取消
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleBatchDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              確認刪除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
