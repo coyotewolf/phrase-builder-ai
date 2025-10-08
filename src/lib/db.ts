@@ -177,20 +177,30 @@ class VocabularyDB {
 
   async updateWordbook(id: string, updates: Partial<Wordbook>): Promise<Wordbook> {
     const store = await this.getStore('wordbooks', 'readwrite');
-    const existing = await this.getWordbook(id);
-    if (!existing) throw new Error('Wordbook not found');
-    
-    const updated: Wordbook = {
-      ...existing,
-      ...updates,
-      id,
-      updated_at: new Date().toISOString(),
-    };
     
     return new Promise((resolve, reject) => {
-      const request = store.put(updated);
-      request.onsuccess = () => resolve(updated);
-      request.onerror = () => reject(request.error);
+      const getRequest = store.get(id);
+      
+      getRequest.onsuccess = () => {
+        const existing = getRequest.result;
+        if (!existing) {
+          reject(new Error('Wordbook not found'));
+          return;
+        }
+        
+        const updated: Wordbook = {
+          ...existing,
+          ...updates,
+          id,
+          updated_at: new Date().toISOString(),
+        };
+        
+        const putRequest = store.put(updated);
+        putRequest.onsuccess = () => resolve(updated);
+        putRequest.onerror = () => reject(putRequest.error);
+      };
+      
+      getRequest.onerror = () => reject(getRequest.error);
     });
   }
 
