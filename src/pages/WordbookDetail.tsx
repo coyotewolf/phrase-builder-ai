@@ -427,9 +427,10 @@ const WordbookDetail = () => {
     
     if (!isSelectionMode) {
       // Enter selection mode
+      // Record state BEFORE toggling
       const stateMap = new Map<string, boolean>();
       cards.forEach(card => {
-        stateMap.set(card.id, card.id === cardId);
+        stateMap.set(card.id, false); // All cards were unselected before entering selection mode
       });
       
       // Update all states together to ensure consistency
@@ -438,7 +439,13 @@ const WordbookDetail = () => {
       setIsDragging(true);
       setInitialSelectionState(stateMap);
     } else {
-      // In selection mode, long press toggles and starts dragging
+      // In selection mode, record current state BEFORE toggling
+      const stateMap = new Map<string, boolean>();
+      cards.forEach(c => {
+        stateMap.set(c.id, selectedCardIds.has(c.id));
+      });
+      
+      // Then toggle the long-pressed card
       const newSelectedState = !selectedCardIds.has(cardId);
       const newSet = new Set(selectedCardIds);
       if (newSelectedState) {
@@ -446,16 +453,6 @@ const WordbookDetail = () => {
       } else {
         newSet.delete(cardId);
       }
-      
-      // Store initial selection states with the toggled state
-      const stateMap = new Map<string, boolean>();
-      cards.forEach(c => {
-        if (c.id === cardId) {
-          stateMap.set(c.id, newSelectedState);
-        } else {
-          stateMap.set(c.id, selectedCardIds.has(c.id));
-        }
-      });
       
       setSelectedCardIds(newSet);
       setIsDragging(true);
@@ -833,7 +830,7 @@ const WordbookDetail = () => {
                         const cardElement = element?.closest('[data-card-id]');
                         if (cardElement) {
                           const hoveredCardId = cardElement.getAttribute('data-card-id');
-                          if (hoveredCardId && hoveredCardId !== longPressedCardId.current) {
+                          if (hoveredCardId) {
                             const wasInitiallySelected = initialSelectionState.get(hoveredCardId) || false;
                             const isCurrentlySelected = selectedCardIds.has(hoveredCardId);
                             
@@ -867,7 +864,7 @@ const WordbookDetail = () => {
                       }
                     }}
                     onMouseEnter={() => {
-                      if (isDragging && isSelectionMode && card.id !== longPressedCardId.current) {
+                      if (isDragging && isSelectionMode) {
                         const wasInitiallySelected = initialSelectionState.get(card.id) || false;
                         const isCurrentlySelected = selectedCardIds.has(card.id);
                         
