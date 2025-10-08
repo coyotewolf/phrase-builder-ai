@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Target, Flame, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -23,6 +24,7 @@ interface ProgressByLevel {
 type TimeRange = "7days" | "30days" | "all";
 
 const Statistics = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TimeRange>("7days");
   const [errorCards, setErrorCards] = useState<ErrorCard[]>([]);
   const [todayCount, setTodayCount] = useState(0);
@@ -356,7 +358,7 @@ const Statistics = () => {
           current: levelStats[level].current,
           total: levelStats[level].total,
           percentage: levelStats[level].total > 0 ? Math.round((levelStats[level].current / levelStats[level].total) * 100) : 0,
-          color: level === "Beginner" ? "bg-teal" : level === "Intermediate" ? "bg-yellow" : "bg-destructive",
+          color: level === "Beginner" ? "bg-teal" : level === "Intermediate" ? "bg-yellow" : "bg-pink-400",
         }))
         .filter(l => l.total > 0); // 只顯示有資料的級別
       
@@ -446,7 +448,7 @@ const Statistics = () => {
                 <span>學習</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-success rounded"></div>
+                <div className="w-3 h-3 bg-yellow rounded"></div>
                 <span>複習</span>
               </div>
             </div>
@@ -454,10 +456,6 @@ const Statistics = () => {
           <div className="flex items-end justify-between gap-3 h-48">
             {weeklyProgress.map((data, index) => (
               <div key={index} className="flex-1 flex flex-col items-center gap-2">
-                <div className="text-xs font-semibold text-center min-h-[32px] flex flex-col justify-end gap-0.5">
-                  <div className="text-teal">{data.learned > 0 ? data.learned : ''}</div>
-                  <div className="text-success">{data.reviewed > 0 ? data.reviewed : ''}</div>
-                </div>
                 <div className="w-full relative flex gap-1 items-end" style={{ height: "160px" }}>
                   <div
                     className="flex-1 bg-teal rounded-t transition-all"
@@ -467,14 +465,20 @@ const Statistics = () => {
                     }}
                   />
                   <div
-                    className="flex-1 bg-success rounded-t transition-all"
+                    className="flex-1 bg-yellow rounded-t transition-all"
                     style={{ 
                       height: `${maxProgress > 0 ? (data.reviewed / maxProgress) * 100 : 0}%`,
                       minHeight: data.reviewed > 0 ? "8px" : "0px"
                     }}
                   />
                 </div>
-                <span className="text-xs text-muted-foreground font-medium">{progressLabels[index]}</span>
+                <div className="text-xs text-muted-foreground font-medium space-y-0.5">
+                  <div>{progressLabels[index]}</div>
+                  <div className="flex gap-2 justify-center">
+                    <span className="text-teal">{data.learned > 0 ? data.learned : ''}</span>
+                    <span className="text-yellow">{data.reviewed > 0 ? data.reviewed : ''}</span>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -485,7 +489,11 @@ const Statistics = () => {
           <h2 className="text-lg font-semibold">各程度進度</h2>
           <div className="space-y-4">
             {progressByLevel.map((level) => (
-              <div key={level.level} className="space-y-2">
+              <div 
+                key={level.level} 
+                className="space-y-2 cursor-pointer hover:bg-muted/50 p-2 rounded-lg transition-colors"
+                onClick={() => navigate(`/wordbooks-by-level/${level.level}`)}
+              >
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-medium">{level.level}</span>
                   <span className="text-muted-foreground">

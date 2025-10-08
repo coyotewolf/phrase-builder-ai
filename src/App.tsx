@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
 import Wordbooks from "./pages/Wordbooks";
 import WordbookDetail from "./pages/WordbookDetail";
+import WordbooksByLevel from "./pages/WordbooksByLevel";
 import Statistics from "./pages/Statistics";
 import Settings from "./pages/Settings";
 import Review from "./pages/Review";
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/" element={<Home />} />
           <Route path="/wordbooks" element={<Wordbooks />} />
           <Route path="/wordbooks/:id" element={<WordbookDetail />} />
+          <Route path="/wordbooks-by-level/:level" element={<WordbooksByLevel />} />
           <Route path="/statistics" element={<Statistics />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/review" element={<Review />} />
