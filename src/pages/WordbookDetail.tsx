@@ -846,7 +846,7 @@ const WordbookDetail = () => {
             <div 
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
               style={{
-                touchAction: (isSelectionMode && isLongPressing) ? 'none' : 'auto'
+                touchAction: (isSelectionMode && isDragging) ? 'none' : 'auto'
               }}
             >
               {cards.map((card) => {
@@ -871,14 +871,12 @@ const WordbookDetail = () => {
                       handleCardTouchEnd();
                     }}
                     onTouchMove={(e) => {
-                      // Prevent default FIRST if in selection mode and long press is pending or active
-                      if (isSelectionMode && (longPressTimer.current || isDragging)) {
-                        e.preventDefault();
-                      }
-                      
                       handleCardTouchMove(e);
                       
+                      // Always prevent default when dragging in selection mode
                       if (isDragging && isSelectionMode) {
+                        e.preventDefault();
+                        e.stopPropagation();
                         const touch = e.touches[0];
                         
                         // Check if near edges and start/stop auto-scroll accordingly
