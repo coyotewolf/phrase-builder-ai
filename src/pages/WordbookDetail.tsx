@@ -184,12 +184,82 @@ const WordbookDetail = () => {
     if (!id) return;
 
     try {
+      const levelChanged = updates.level && updates.level !== wordbook?.level;
       await db.updateWordbook(id, updates);
       toast.success("單詞書已更新");
       loadData();
+      
+      // If level changed, ask user if they want to regenerate all cards
+      if (levelChanged && cards.length > 0) {
+        const shouldRegenerate = confirm(
+          `單詞書程度已變更為 ${updates.level}。是否要根據新程度重新生成此本內所有單字的 AI 內容（同義詞、反義詞、例句等）？`
+        );
+        
+        if (shouldRegenerate) {
+          await handleRegenerateAllCards(updates.level!);
+        }
+      }
     } catch (error) {
       console.error("Failed to update wordbook:", error);
       toast.error("更新失敗");
+    }
+  };
+
+  const handleRegenerateAllCards = async (newLevel: string) => {
+    const settings = await db.getUserSettings();
+    if (!settings.gemini_api_key) {
+      toast.error("請先設定 Gemini API 密鑰");
+      setIsApiKeyDialogOpen(true);
+      return;
+    }
+
+    try {
+      toast.info(`開始重新生成 ${cards.length} 張單字卡...`);
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const card of cards) {
+        try {
+          const details = await generateWordDetails(
+            { 
+              words: [card.headword], 
+              level: newLevel,
+              limits: { synonyms: 10, antonyms: 10, examples: 5 }
+            },
+            settings.gemini_api_key
+          );
+          
+          if (details && details.length > 0) {
+            const detail = details[0];
+            await db.updateCard(card.id, {
+              phonetic: detail.ipa || card.phonetic,
+              meanings: detail.meanings.map(m => ({
+                part_of_speech: m.part_of_speech,
+                meaning_zh: m.definition_zh || "",
+                meaning_en: m.definition_en || "",
+                synonyms: m.synonyms || [],
+                antonyms: m.antonyms || [],
+                examples: m.examples || [],
+              })),
+              notes: detail.notes || card.notes,
+            });
+            successCount++;
+          }
+        } catch (error) {
+          console.error(`Failed to regenerate card ${card.headword}:`, error);
+          errorCount++;
+        }
+      }
+
+      if (errorCount === 0) {
+        toast.success(`成功重新生成 ${successCount} 張單字卡`);
+      } else {
+        toast.warning(`已重新生成 ${successCount} 張單字卡，${errorCount} 張失敗`);
+      }
+      loadData();
+    } catch (error) {
+      console.error("Failed to regenerate cards:", error);
+      toast.error("批量重新生成失敗");
     }
   };
 
