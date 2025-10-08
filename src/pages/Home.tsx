@@ -239,22 +239,33 @@ const Home = () => {
           <h2 className="text-2xl font-bold">開始學習</h2>
           
           <Card
-            className="p-6 cursor-pointer hover:bg-muted/50 transition-colors"
-            onClick={() => navigate("/review?mode=due")}
+            className="relative overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform group"
+            onClick={() => navigate("/review?mode=yesterday")}
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-background rounded-2xl">
-                  <Clock className="h-8 w-8" />
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent" />
+            <div className="relative p-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-3 flex-1">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-primary/20 rounded-2xl">
+                      <Clock className="h-8 w-8 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-bold">待複習</h3>
+                      <p className="text-sm text-muted-foreground">複習昨天學習的單字</p>
+                    </div>
+                  </div>
+                  <div className="pl-14">
+                    <div className="text-5xl font-bold bg-gradient-to-r from-primary to-primary/50 bg-clip-text text-transparent">
+                      {dueCount}
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">張卡片等待複習</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-xl font-semibold">待複習</h3>
-                  <p className="text-muted-foreground">
-                    {String(dueCount).padStart(6, '0')} 張卡片
-                  </p>
+                <div className="p-4 bg-primary/10 rounded-2xl group-hover:bg-primary/20 transition-colors">
+                  <Play className="h-8 w-8 text-primary" />
                 </div>
               </div>
-              <Play className="h-6 w-6 text-muted-foreground" />
             </div>
           </Card>
 

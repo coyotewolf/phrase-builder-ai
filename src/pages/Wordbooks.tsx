@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, BookOpen, MoreVertical, Clock } from "lucide-react";
+import { Plus, BookOpen, MoreVertical, Clock, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -30,6 +30,7 @@ import {
 import { db, Wordbook } from "@/lib/db";
 import { toast } from "sonner";
 import BottomNav from "@/components/BottomNav";
+import { GenerateWordbookDialog } from "@/components/GenerateWordbookDialog";
 
 interface WordbookWithStats extends Wordbook {
   cardCount: number;
@@ -44,6 +45,7 @@ const Wordbooks = () => {
   const [newWordbookDescription, setNewWordbookDescription] = useState("");
   const [newWordbookLevel, setNewWordbookLevel] = useState("不限制");
   const [isLoading, setIsLoading] = useState(true);
+  const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
 
   useEffect(() => {
     loadWordbooks();
@@ -123,13 +125,24 @@ const Wordbooks = () => {
       <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">單詞書</h1>
-          <Button
-            size="icon"
-            className="rounded-2xl"
-            onClick={() => setIsCreateDialogOpen(true)}
-          >
-            <Plus className="h-5 w-5" />
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => setIsGenerateDialogOpen(true)}
+            >
+              <Sparkles className="h-4 w-4" />
+              AI 生成
+            </Button>
+            <Button
+              size="icon"
+              className="rounded-2xl"
+              onClick={() => setIsCreateDialogOpen(true)}
+            >
+              <Plus className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
 
         {isLoading ? (
@@ -272,6 +285,12 @@ const Wordbooks = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <GenerateWordbookDialog
+          open={isGenerateDialogOpen}
+          onOpenChange={setIsGenerateDialogOpen}
+          onSuccess={loadWordbooks}
+        />
       </div>
 
       <BottomNav />

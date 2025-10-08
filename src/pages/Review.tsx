@@ -114,6 +114,26 @@ const Review = () => {
           filteredCards = dueCards.filter((c): c is VocabCard => c !== null);
           break;
         }
+        case "yesterday": {
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 1);
+          yesterday.setHours(0, 0, 0, 0);
+          const yesterdayEnd = new Date(yesterday);
+          yesterdayEnd.setHours(23, 59, 59, 999);
+
+          const yesterdayCards = await Promise.all(
+            allCards.map(async (card) => {
+              const stats = await db.getCardStats(card.id);
+              if (stats?.last_reviewed_at) {
+                const reviewDate = new Date(stats.last_reviewed_at);
+                return reviewDate >= yesterday && reviewDate <= yesterdayEnd ? card : null;
+              }
+              return null;
+            })
+          );
+          filteredCards = yesterdayCards.filter((c): c is VocabCard => c !== null);
+          break;
+        }
         case "new": {
           const newCards = await Promise.all(
             allCards.map(async (card) => {
@@ -305,6 +325,7 @@ const Review = () => {
           <h3 className="text-lg font-semibold mb-2">沒有卡片需要複習</h3>
           <p className="text-sm text-muted-foreground mb-4">
             {mode === "due" && "太棒了！你已經完成所有到期的複習"}
+            {mode === "yesterday" && "昨天沒有複習任何單字"}
             {mode === "new" && "沒有新的單字卡"}
             {mode === "frequent-errors" && "沒有錯誤記錄"}
           </p>
