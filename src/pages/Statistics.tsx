@@ -220,8 +220,8 @@ const Statistics = () => {
   const maxProgress = Math.max(...weeklyProgress);
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <div className="p-6 space-y-6">
+    <div className="min-h-screen bg-background pb-20 overflow-x-hidden">
+      <div className="p-4 sm:p-6 space-y-6">
         {/* Header with Tabs */}
         <div className="space-y-4">
           <h1 className="text-3xl font-bold">Statistics</h1>

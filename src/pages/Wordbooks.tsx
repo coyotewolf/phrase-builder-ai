@@ -119,8 +119,8 @@ const Wordbooks = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <div className="p-6 space-y-6">
+    <div className="min-h-screen bg-background pb-20 overflow-x-hidden">
+      <div className="p-4 sm:p-6 space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">Wordbooks</h1>
           <Button

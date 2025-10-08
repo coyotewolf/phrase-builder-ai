@@ -100,7 +100,7 @@ const Home = () => {
   const progressPercentage = dailyGoal > 0 ? Math.min((todayCompleted / dailyGoal) * 100, 100) : 0;
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-20 overflow-x-hidden">
       {/* Header */}
       <div className="flex items-center justify-between p-4">
         <Button 
@@ -121,7 +121,7 @@ const Home = () => {
         </Button>
       </div>
 
-      <div className="px-6 space-y-6">
+      <div className="px-4 sm:px-6 space-y-6">
         {/* Greeting */}
         <div className="space-y-2">
           <h1 className="text-3xl font-bold">{getGreeting()} 👋</h1>

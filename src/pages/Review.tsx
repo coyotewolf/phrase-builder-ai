@@ -157,7 +157,7 @@ const Review = () => {
   const progress = ((currentIndex + 1) / cards.length) * 100;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 p-6">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 p-4 sm:p-6 overflow-x-hidden">
       <div className="mx-auto max-w-2xl space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -173,11 +173,11 @@ const Review = () => {
         <Progress value={progress} className="h-2" />
 
         {/* Card */}
-        <Card className="p-8 min-h-[400px] flex flex-col justify-between shadow-xl">
+        <Card className="p-4 sm:p-8 min-h-[400px] flex flex-col justify-between shadow-xl">
           <div className="space-y-6">
             <div className="flex items-start justify-between">
-            <div className="flex-1">
-                <h2 className="text-3xl font-bold mb-2">{currentCard.headword}</h2>
+            <div className="flex-1 min-w-0">
+                <h2 className="text-2xl sm:text-3xl font-bold mb-2 break-words">{currentCard.headword}</h2>
                 {showAnswer && currentCard.phonetic && (
                   <p className="text-muted-foreground">{currentCard.phonetic}</p>
                 )}
@@ -197,7 +197,7 @@ const Review = () => {
                     currentCard.meanings.map((m, idx) => {
                       const posAbbr = m.part_of_speech?.substring(0, 1) || '';
                       return (
-                        <p key={idx} className="text-lg mb-1">
+                        <p key={idx} className="text-base sm:text-lg mb-1 break-words">
                           <span className="font-medium">{posAbbr && `${posAbbr}. `}</span>
                           {m.meaning_zh || m.meaning_en}
                         </p>
@@ -209,10 +209,10 @@ const Review = () => {
                 {/* Detailed view for each part of speech */}
                 {currentCard.meanings && currentCard.meanings.map((meaning, idx) => (
                   <div key={idx} className="border-l-2 border-primary pl-4">
-                    <h3 className="font-semibold mb-2">
+                    <h3 className="font-semibold mb-2 text-sm sm:text-base">
                       {meaning.part_of_speech || `釋義 ${idx + 1}`}
                     </h3>
-                    <div className="space-y-2">
+                    <div className="space-y-2 text-sm sm:text-base">
                       {meaning.meaning_zh && (
                         <p className="text-muted-foreground">
                           <span className="font-medium">中文：</span>{meaning.meaning_zh}
@@ -260,23 +260,26 @@ const Review = () => {
                 顯示答案
               </Button>
             ) : (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-2 sm:gap-4">
                 <Button
                   variant="destructive"
                   size="lg"
+                  className="text-sm sm:text-base"
                   onClick={() => handleAnswer(false)}
                 >
-                  <X className="h-5 w-5 mr-2" />
-                  不記得
+                  <X className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-2" />
+                  <span className="hidden sm:inline">不記得</span>
+                  <span className="sm:hidden">✗</span>
                 </Button>
                 <Button
                   variant="default"
                   size="lg"
+                  className="bg-success hover:bg-success/90 text-sm sm:text-base"
                   onClick={() => handleAnswer(true)}
-                  className="bg-success hover:bg-success/90"
                 >
-                  <Check className="h-5 w-5 mr-2" />
-                  記得
+                  <Check className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-2" />
+                  <span className="hidden sm:inline">記得</span>
+                  <span className="sm:hidden">✓</span>
                 </Button>
               </div>
             )}

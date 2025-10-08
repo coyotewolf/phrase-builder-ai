@@ -348,16 +348,16 @@ const WordbookDetail = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 pb-20">
-      <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 pb-20 overflow-x-hidden">
+      <div className="p-4 sm:p-6 space-y-6">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex items-center gap-4 min-w-0 flex-1">
           <Button variant="ghost" size="icon" onClick={() => navigate("/wordbooks")}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <h1 className="text-3xl font-bold">{wordbook.name}</h1>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-2xl sm:text-3xl font-bold truncate">{wordbook.name}</h1>
                 <Button 
                   variant="ghost" 
                   size="icon"
@@ -367,7 +367,9 @@ const WordbookDetail = () => {
                 </Button>
               </div>
               {wordbook.description && (
-                <p className="text-muted-foreground">{wordbook.description}</p>
+                <p className="text-sm text-muted-foreground line-clamp-2">
+                  {wordbook.description}
+                </p>
               )}
               {wordbook.level && (
                 <span className="inline-block mt-1 px-2 py-0.5 bg-primary/10 text-primary rounded text-xs">
@@ -376,7 +378,7 @@ const WordbookDetail = () => {
               )}
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <input
               type="file"
               accept=".csv"
@@ -386,14 +388,16 @@ const WordbookDetail = () => {
             />
             <Button
               variant="outline"
+              size="sm"
+              className="flex-1 sm:flex-none"
               onClick={() => document.getElementById("csv-upload")?.click()}
             >
-              <Upload className="h-4 w-4 mr-2" />
-              匯入 CSV
+              <Upload className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">匯入 CSV</span>
             </Button>
-            <Button onClick={() => setIsAddDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              新增單字卡
+            <Button size="sm" className="flex-1 sm:flex-none" onClick={() => setIsAddDialogOpen(true)}>
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">新增單字卡</span>
             </Button>
           </div>
         </div>
@@ -410,7 +414,7 @@ const WordbookDetail = () => {
             </Button>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {cards.map((card) => (
               <Card
                 key={card.id}
@@ -432,7 +436,7 @@ const WordbookDetail = () => {
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                 </div>
-                <h3 className="text-xl font-bold mb-2 pr-16">{card.headword}</h3>
+                <h3 className="text-xl font-bold mb-2 pr-16 break-words">{card.headword}</h3>
                 {card.phonetic && (
                   <p className="text-sm text-muted-foreground mb-2">
                     {card.phonetic}
