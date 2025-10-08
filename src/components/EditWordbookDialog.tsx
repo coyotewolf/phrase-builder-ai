@@ -19,15 +19,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Wordbook } from "@/lib/db";
+import { Sparkles } from "lucide-react";
 
 interface EditWordbookDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   wordbook: Wordbook | null;
   onSave: (updates: Partial<Wordbook>) => void;
+  onFillIncomplete: () => void;
 }
 
-export function EditWordbookDialog({ open, onOpenChange, wordbook, onSave }: EditWordbookDialogProps) {
+export function EditWordbookDialog({ open, onOpenChange, wordbook, onSave, onFillIncomplete }: EditWordbookDialogProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [level, setLevel] = useState("不限制");
@@ -46,6 +48,11 @@ export function EditWordbookDialog({ open, onOpenChange, wordbook, onSave }: Edi
       description,
       level,
     });
+    onOpenChange(false);
+  };
+
+  const handleFillIncomplete = () => {
+    onFillIncomplete();
     onOpenChange(false);
   };
 
@@ -102,6 +109,22 @@ export function EditWordbookDialog({ open, onOpenChange, wordbook, onSave }: Edi
                 <SelectItem value="CEFR-C2">CEFR C2</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div className="pt-4 border-t">
+            <div className="space-y-2">
+              <Label>AI 輔助功能</Label>
+              <p className="text-sm text-muted-foreground">
+                自動補齊所有缺少音標、釋義或詳細資料的單字卡
+              </p>
+              <Button
+                variant="outline"
+                onClick={handleFillIncomplete}
+                className="w-full"
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                一鍵補齊不完整單字
+              </Button>
+            </div>
           </div>
         </div>
         <DialogFooter>

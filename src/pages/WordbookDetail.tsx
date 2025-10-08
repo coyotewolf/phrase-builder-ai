@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Plus, ArrowLeft, Trash2, Upload, Sparkles, Edit, Settings } from "lucide-react";
+import { Plus, ArrowLeft, Trash2, Upload, Sparkles, Edit, Settings, CheckSquare, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -56,6 +56,11 @@ const WordbookDetail = () => {
   const [newNotes, setNewNotes] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
+  const [isDragging, setIsDragging] = useState(false);
+  const [isFilling, setIsFilling] = useState(false);
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     loadData();
@@ -281,6 +286,233 @@ const WordbookDetail = () => {
     }
   };
 
+  const handleFillIncompleteCards = async () => {
+    const settings = await db.getUserSettings();
+    if (!settings.gemini_api_key) {
+      toast.error("請先設定 Gemini API 密鑰");
+      setIsApiKeyDialogOpen(true);
+      return;
+    }
+
+    setIsFilling(true);
+    
+    try {
+      const incompleteCards = cards.filter(card => {
+        const hasNoPhonetic = !card.phonetic;
+        const hasEmptyMeanings = !card.meanings || card.meanings.length === 0 || 
+          card.meanings.some(m => !m.meaning_zh && !m.meaning_en);
+        const hasNoDetails = card.meanings?.every(m => 
+          (!m.synonyms || m.synonyms.length === 0) && 
+          (!m.antonyms || m.antonyms.length === 0) && 
+          (!m.examples || m.examples.length === 0)
+        );
+        return hasNoPhonetic || hasEmptyMeanings || hasNoDetails;
+      });
+
+      if (incompleteCards.length === 0) {
+        toast.info("所有單字卡資料都已完整");
+        return;
+      }
+
+      toast.info(`找到 ${incompleteCards.length} 張不完整的單字卡，開始補齊...`);
+      
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (let i = 0; i < incompleteCards.length; i++) {
+        const card = incompleteCards[i];
+        try {
+          toast.info(`正在處理 ${i + 1}/${incompleteCards.length}: ${card.headword}`);
+          
+          const details = await generateWordDetails(
+            { 
+              words: [card.headword], 
+              level: wordbook?.level || 'TOEFL',
+              limits: { synonyms: 10, antonyms: 10, examples: 5 }
+            },
+            settings.gemini_api_key
+          );
+          
+          if (details && details.length > 0) {
+            const detail = details[0];
+            await db.updateCard(card.id, {
+              phonetic: detail.ipa || card.phonetic,
+              meanings: detail.meanings.map(m => ({
+                part_of_speech: m.part_of_speech,
+                meaning_zh: m.definition_zh || "",
+                meaning_en: m.definition_en || "",
+                synonyms: m.synonyms || [],
+                antonyms: m.antonyms || [],
+                examples: m.examples || [],
+              })),
+              notes: detail.notes || card.notes,
+            });
+            successCount++;
+          }
+          
+          if (i < incompleteCards.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        } catch (error) {
+          console.error(`Failed to fill card ${card.headword}:`, error);
+          errorCount++;
+        }
+      }
+
+      if (errorCount === 0) {
+        toast.success(`✅ 成功補齊所有 ${successCount} 張單字卡`);
+      } else {
+        toast.warning(`已補齊 ${successCount} 張單字卡，${errorCount} 張失敗`);
+      }
+      await loadData();
+    } catch (error) {
+      console.error("Failed to fill incomplete cards:", error);
+      toast.error("補齊失敗");
+    } finally {
+      setIsFilling(false);
+    }
+  };
+
+  const handleCardLongPress = (cardId: string) => {
+    setIsSelectionMode(true);
+    setSelectedCardIds(new Set([cardId]));
+  };
+
+  const handleCardTouchStart = (cardId: string) => {
+    if (isSelectionMode) {
+      toggleCardSelection(cardId);
+    } else {
+      longPressTimer.current = setTimeout(() => {
+        handleCardLongPress(cardId);
+      }, 500);
+    }
+  };
+
+  const handleCardTouchEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+    setIsDragging(false);
+  };
+
+  const handleCardTouchMove = (cardId: string) => {
+    if (isSelectionMode && isDragging) {
+      toggleCardSelection(cardId);
+    }
+  };
+
+  const toggleCardSelection = (cardId: string) => {
+    setSelectedCardIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(cardId)) {
+        newSet.delete(cardId);
+      } else {
+        newSet.add(cardId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleBatchDelete = async () => {
+    if (selectedCardIds.size === 0) return;
+    
+    if (!confirm(`確定要刪除選中的 ${selectedCardIds.size} 張單字卡嗎？`)) return;
+
+    try {
+      for (const cardId of selectedCardIds) {
+        await db.deleteCard(cardId);
+      }
+      toast.success(`已刪除 ${selectedCardIds.size} 張單字卡`);
+      setSelectedCardIds(new Set());
+      setIsSelectionMode(false);
+      loadData();
+    } catch (error) {
+      console.error("Failed to delete cards:", error);
+      toast.error("刪除失敗");
+    }
+  };
+
+  const handleBatchRegenerate = async () => {
+    if (selectedCardIds.size === 0) return;
+    
+    const settings = await db.getUserSettings();
+    if (!settings.gemini_api_key) {
+      toast.error("請先設定 Gemini API 密鑰");
+      setIsApiKeyDialogOpen(true);
+      return;
+    }
+
+    setIsRegenerating(true);
+    
+    try {
+      const selectedCards = cards.filter(card => selectedCardIds.has(card.id));
+      toast.info(`開始重新生成 ${selectedCards.length} 張單字卡...`);
+      
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (let i = 0; i < selectedCards.length; i++) {
+        const card = selectedCards[i];
+        try {
+          toast.info(`正在處理 ${i + 1}/${selectedCards.length}: ${card.headword}`);
+          
+          const details = await generateWordDetails(
+            { 
+              words: [card.headword], 
+              level: wordbook?.level || 'TOEFL',
+              limits: { synonyms: 10, antonyms: 10, examples: 5 }
+            },
+            settings.gemini_api_key
+          );
+          
+          if (details && details.length > 0) {
+            const detail = details[0];
+            await db.updateCard(card.id, {
+              phonetic: detail.ipa || card.phonetic,
+              meanings: detail.meanings.map(m => ({
+                part_of_speech: m.part_of_speech,
+                meaning_zh: m.definition_zh || "",
+                meaning_en: m.definition_en || "",
+                synonyms: m.synonyms || [],
+                antonyms: m.antonyms || [],
+                examples: m.examples || [],
+              })),
+              notes: detail.notes || card.notes,
+            });
+            successCount++;
+          }
+          
+          if (i < selectedCards.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        } catch (error) {
+          console.error(`Failed to regenerate card ${card.headword}:`, error);
+          errorCount++;
+        }
+      }
+
+      if (errorCount === 0) {
+        toast.success(`✅ 成功重新生成所有 ${successCount} 張單字卡`);
+      } else {
+        toast.warning(`已重新生成 ${successCount} 張單字卡，${errorCount} 張失敗`);
+      }
+      setSelectedCardIds(new Set());
+      setIsSelectionMode(false);
+      await loadData();
+    } catch (error) {
+      console.error("Failed to batch regenerate:", error);
+      toast.error("批量重新生成失敗");
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+
+  const cancelSelectionMode = () => {
+    setIsSelectionMode(false);
+    setSelectedCardIds(new Set());
+  };
+
   const handleDeleteCard = async (cardId: string) => {
     if (!confirm("確定要刪除這張卡片嗎？")) return;
 
@@ -414,47 +646,131 @@ const WordbookDetail = () => {
             </Button>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {cards.map((card) => (
-              <Card
-                key={card.id}
-                className="p-6 hover:shadow-lg transition-shadow group relative"
-              >
-                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEditCard(card)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteCard(card.id)}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
-                <h3 className="text-xl font-bold mb-2 pr-16 break-words">{card.headword}</h3>
-                {card.phonetic && (
-                  <p className="text-sm text-muted-foreground mb-2">
-                    {card.phonetic}
-                  </p>
-                )}
-                {card.meanings && card.meanings.length > 0 && (
-                  <div className="space-y-1">
-                    {card.meanings.map((meaning, idx) => (
-                      <p key={idx} className="text-sm text-muted-foreground">
-                        {meaning.part_of_speech && `${meaning.part_of_speech}. `}
-                        {meaning.meaning_zh || meaning.meaning_en}
-                      </p>
-                    ))}
+          <>
+            {isSelectionMode && (
+              <div className="fixed top-20 left-0 right-0 z-20 bg-primary text-primary-foreground p-4 shadow-lg">
+                <div className="max-w-7xl mx-auto flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={cancelSelectionMode}
+                      className="text-primary-foreground hover:bg-primary-foreground/20"
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      取消
+                    </Button>
+                    <span className="font-medium">
+                      已選擇 {selectedCardIds.size} 張卡片
+                    </span>
                   </div>
-                )}
-              </Card>
-            ))}
-          </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleBatchRegenerate}
+                      disabled={selectedCardIds.size === 0}
+                    >
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      AI 重新生成
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleBatchDelete}
+                      disabled={selectedCardIds.size === 0}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      刪除
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {cards.map((card) => {
+                const isSelected = selectedCardIds.has(card.id);
+                return (
+                  <Card
+                    key={card.id}
+                    className={`p-6 transition-all group relative cursor-pointer select-none ${
+                      isSelectionMode 
+                        ? isSelected 
+                          ? 'ring-2 ring-primary bg-primary/10' 
+                          : 'hover:ring-2 hover:ring-primary/50'
+                        : 'hover:shadow-lg'
+                    }`}
+                    onTouchStart={() => {
+                      handleCardTouchStart(card.id);
+                      if (isSelectionMode) setIsDragging(true);
+                    }}
+                    onTouchEnd={handleCardTouchEnd}
+                    onTouchMove={() => handleCardTouchMove(card.id)}
+                    onMouseDown={() => {
+                      if (isSelectionMode) {
+                        toggleCardSelection(card.id);
+                      } else {
+                        handleCardTouchStart(card.id);
+                      }
+                    }}
+                    onMouseUp={handleCardTouchEnd}
+                    onMouseEnter={() => {
+                      if (isSelectionMode && isDragging) {
+                        toggleCardSelection(card.id);
+                      }
+                    }}
+                  >
+                    {isSelectionMode && (
+                      <div className="absolute top-4 left-4 z-10">
+                        <CheckSquare 
+                          className={`h-6 w-6 ${isSelected ? 'text-primary fill-primary' : 'text-muted-foreground'}`}
+                        />
+                      </div>
+                    )}
+                    
+                    {!isSelectionMode && (
+                      <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditCard(card)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteCard(card.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    )}
+                    
+                    <h3 className={`text-xl font-bold mb-2 break-words ${isSelectionMode ? 'pl-8' : 'pr-16'}`}>
+                      {card.headword}
+                    </h3>
+                    {card.phonetic && (
+                      <p className="text-sm text-muted-foreground mb-2">
+                        {card.phonetic}
+                      </p>
+                    )}
+                    {card.meanings && card.meanings.length > 0 && (
+                      <div className="space-y-1">
+                        {card.meanings.map((meaning, idx) => (
+                          <p key={idx} className="text-sm text-muted-foreground">
+                            {meaning.part_of_speech && `${meaning.part_of_speech}. `}
+                            {meaning.meaning_zh || meaning.meaning_en}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
+          </>
         )}
 
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -548,6 +864,7 @@ const WordbookDetail = () => {
           onOpenChange={setIsEditWordbookDialogOpen}
           wordbook={wordbook}
           onSave={handleSaveWordbook}
+          onFillIncomplete={handleFillIncompleteCards}
         />
 
         <RegenerateCardsDialog
@@ -558,12 +875,14 @@ const WordbookDetail = () => {
           cardCount={cards.length}
         />
 
-        {isRegenerating && (
+        {(isRegenerating || isFilling) && (
           <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
             <Card className="p-6 space-y-4 max-w-md">
               <div className="flex items-center gap-3">
                 <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full" />
-                <p className="font-semibold">正在重新生成單字卡...</p>
+                <p className="font-semibold">
+                  {isRegenerating ? '正在重新生成單字卡...' : '正在補齊單字卡資料...'}
+                </p>
               </div>
               <p className="text-sm text-muted-foreground">
                 請稍候，這可能需要幾分鐘時間
