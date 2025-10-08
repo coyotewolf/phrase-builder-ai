@@ -822,7 +822,7 @@ const WordbookDetail = () => {
                       if (isDragging && isSelectionMode) {
                         const touch = e.touches[0];
                         
-                        // Auto-scroll when near edges
+                        // Check if near edges and start/stop auto-scroll accordingly
                         startAutoScroll(touch.clientY);
                         
                         const element = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -858,7 +858,7 @@ const WordbookDetail = () => {
                     }}
                     onMouseMove={(e) => {
                       if (isDragging && isSelectionMode) {
-                        // Auto-scroll when near edges
+                        // Check if near edges and start/stop auto-scroll accordingly
                         startAutoScroll(e.clientY);
                       }
                     }}
