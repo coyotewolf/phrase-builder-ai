@@ -392,6 +392,10 @@ const WordbookDetail = () => {
     setIsSelectionMode(false);
     setSelectedCardIds(new Set());
     setIsDragging(false);
+    setIsLongPressing(false);
+    // Restore scrolling when exiting selection mode
+    document.body.style.overflow = '';
+    document.body.style.touchAction = '';
   };
 
   const startAutoScroll = (clientY: number) => {
@@ -428,6 +432,10 @@ const WordbookDetail = () => {
   const handleCardLongPress = (cardId: string) => {
     longPressedCardId.current = cardId;
     
+    // Prevent body scrolling when long press starts
+    document.body.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
+    
     if (!isSelectionMode) {
       // Enter selection mode
       // Record state BEFORE toggling
@@ -440,6 +448,7 @@ const WordbookDetail = () => {
       setIsSelectionMode(true);
       setSelectedCardIds(new Set([cardId]));
       setIsDragging(true);
+      setIsLongPressing(true);
       setInitialSelectionState(stateMap);
     } else {
       // In selection mode, record current state BEFORE toggling
@@ -489,6 +498,11 @@ const WordbookDetail = () => {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
     }
+    
+    // Restore body scrolling when drag ends
+    document.body.style.overflow = '';
+    document.body.style.touchAction = '';
+    
     touchStartPos.current = null;
     setIsDragging(false);
     setIsLongPressing(false);
@@ -504,12 +518,15 @@ const WordbookDetail = () => {
       const deltaX = Math.abs(touch.clientX - touchStartPos.current.x);
       const deltaY = Math.abs(touch.clientY - touchStartPos.current.y);
       
-      // If moved beyond threshold, user wants to scroll, clear timer
+      // If moved beyond threshold, user wants to scroll, clear timer and restore scrolling
       if (deltaX > MOVE_THRESHOLD || deltaY > MOVE_THRESHOLD) {
         clearTimeout(longPressTimer.current);
         longPressTimer.current = null;
         touchStartPos.current = null;
         setIsLongPressing(false);
+        // Restore scrolling if long press was cancelled
+        document.body.style.overflow = '';
+        document.body.style.touchAction = '';
       }
     }
   };
