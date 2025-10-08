@@ -381,13 +381,13 @@ const Review = () => {
 
       {/* Tap to Flip Hint */}
       {!isFlipped && (
-        <p className="text-center text-sm text-muted-foreground mt-4">
+        <p className="text-center text-sm text-muted-foreground mt-4 mb-24">
           點擊卡片查看釋義 • 上滑查看詳細資訊
         </p>
       )}
 
       {/* Manual action buttons (alternative to swipe) */}
-      <div className="fixed bottom-20 left-0 right-0 px-4 flex justify-center gap-4">
+      <div className="fixed bottom-6 left-0 right-0 px-4 flex justify-center gap-4 pb-safe z-10">
         <Button
           variant="destructive"
           size="lg"
