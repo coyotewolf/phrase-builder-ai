@@ -11,6 +11,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ErrorCardsFilterDialog } from "@/components/ErrorCardsFilterDialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const Home = () => {
   const navigate = useNavigate();
@@ -201,22 +207,15 @@ const Home = () => {
         </div>
 
         {/* Wordbook Selection Dialog */}
-        {showWordbookSelector && (
-          <Card className="p-4 border-2 border-primary/20 absolute top-16 left-4 right-4 z-50 shadow-lg bg-background">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold">選擇目標單詞書</h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowWordbookSelector(false)}
-              >
-                完成
-              </Button>
-            </div>
-            <ScrollArea className="h-48">
-              <div className="space-y-2">
+        <Dialog open={showWordbookSelector} onOpenChange={setShowWordbookSelector}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>選擇目標單詞書</DialogTitle>
+            </DialogHeader>
+            <ScrollArea className="h-64 pr-4">
+              <div className="space-y-3">
                 {allWordbooks.map((wordbook) => (
-                  <div key={wordbook.id} className="flex items-center space-x-2">
+                  <div key={wordbook.id} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
                     <Checkbox
                       id={wordbook.id}
                       checked={selectedWordbooks.includes(wordbook.id)}
@@ -232,8 +231,8 @@ const Home = () => {
                 ))}
               </div>
             </ScrollArea>
-          </Card>
-        )}
+          </DialogContent>
+        </Dialog>
 
         {/* Start Learning */}
         <div className="space-y-4">
