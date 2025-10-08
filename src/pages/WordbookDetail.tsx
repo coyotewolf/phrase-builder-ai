@@ -64,6 +64,7 @@ const WordbookDetail = () => {
   const [initialSelectionState, setInitialSelectionState] = useState<Map<string, boolean>>(new Map());
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const autoScrollInterval = useRef<NodeJS.Timeout | null>(null);
+  const longPressedCardId = useRef<string | null>(null);
   const LONG_PRESS_DURATION = 500; // 500ms for long press
   const SCROLL_EDGE_THRESHOLD = 80; // pixels from edge to trigger scroll
   const SCROLL_SPEED = 10; // pixels per scroll tick
@@ -422,6 +423,8 @@ const WordbookDetail = () => {
   };
 
   const handleCardLongPress = (cardId: string) => {
+    longPressedCardId.current = cardId;
+    
     if (!isSelectionMode) {
       // Enter selection mode
       const stateMap = new Map<string, boolean>();
@@ -475,6 +478,7 @@ const WordbookDetail = () => {
     setIsDragging(false);
     stopAutoScroll();
     setInitialSelectionState(new Map());
+    longPressedCardId.current = null;
   };
 
   const handleCardTouchMove = () => {
@@ -829,7 +833,7 @@ const WordbookDetail = () => {
                         const cardElement = element?.closest('[data-card-id]');
                         if (cardElement) {
                           const hoveredCardId = cardElement.getAttribute('data-card-id');
-                          if (hoveredCardId) {
+                          if (hoveredCardId && hoveredCardId !== longPressedCardId.current) {
                             const wasInitiallySelected = initialSelectionState.get(hoveredCardId) || false;
                             const isCurrentlySelected = selectedCardIds.has(hoveredCardId);
                             
@@ -863,7 +867,7 @@ const WordbookDetail = () => {
                       }
                     }}
                     onMouseEnter={() => {
-                      if (isDragging && isSelectionMode) {
+                      if (isDragging && isSelectionMode && card.id !== longPressedCardId.current) {
                         const wasInitiallySelected = initialSelectionState.get(card.id) || false;
                         const isCurrentlySelected = selectedCardIds.has(card.id);
                         
