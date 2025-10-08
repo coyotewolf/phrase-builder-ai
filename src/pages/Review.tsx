@@ -10,6 +10,7 @@ import { calculateNextReview, answerToQuality } from "@/lib/srs";
 import { toast } from "sonner";
 import { motion, useMotionValue, useTransform, PanInfo } from "framer-motion";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { playPronunciation, isTTSSupported } from "@/lib/tts";
 
 const Review = () => {
   const [searchParams] = useSearchParams();
@@ -21,6 +22,9 @@ const Review = () => {
   const [isFlipped, setIsFlipped] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [ttsEnabled, setTtsEnabled] = useState(true);
+  const [ttsVoice, setTtsVoice] = useState<'en-US' | 'en-GB'>('en-US');
+  const [ttsAutoPlay, setTtsAutoPlay] = useState(false);
 
   const x = useMotionValue(0);
   const y = useMotionValue(0);
@@ -32,7 +36,40 @@ const Review = () => {
 
   useEffect(() => {
     loadCards();
+    loadTTSSettings();
   }, [mode]);
+
+  useEffect(() => {
+    // Auto-play pronunciation when card changes
+    if (ttsEnabled && ttsAutoPlay && currentCard && !isFlipped) {
+      playPronunciation(currentCard.headword, ttsVoice);
+    }
+  }, [currentIndex, ttsEnabled, ttsAutoPlay, ttsVoice]);
+
+  const loadTTSSettings = async () => {
+    try {
+      const settings = await db.getUserSettings();
+      setTtsEnabled(settings.tts_enabled ?? true);
+      setTtsVoice((settings.tts_voice as 'en-US' | 'en-GB') || 'en-US');
+      setTtsAutoPlay(settings.tts_auto_play ?? false);
+    } catch (error) {
+      console.error("Failed to load TTS settings:", error);
+    }
+  };
+
+  const handlePlayPronunciation = () => {
+    if (!ttsEnabled) {
+      toast.error("請在設置中啟用語音功能");
+      return;
+    }
+    if (!isTTSSupported()) {
+      toast.error("您的瀏覽器不支持語音功能");
+      return;
+    }
+    if (currentCard) {
+      playPronunciation(currentCard.headword, ttsVoice);
+    }
+  };
 
   const loadCards = async () => {
     try {
@@ -227,8 +264,13 @@ const Review = () => {
         <Badge variant="secondary">
           {currentIndex + 1} / {cards.length}
         </Badge>
-        <Button variant="ghost" size="icon">
-          <Volume2 className="h-5 w-5" />
+        <Button 
+          variant="ghost" 
+          size="icon"
+          onClick={handlePlayPronunciation}
+          disabled={!ttsEnabled}
+        >
+          <Volume2 className={`h-5 w-5 ${!ttsEnabled ? 'opacity-50' : ''}`} />
         </Button>
       </div>
 
