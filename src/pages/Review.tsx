@@ -26,6 +26,9 @@ const Review = () => {
   const y = useMotionValue(0);
   const rotate = useTransform(x, [-200, 0, 200], [-25, 0, 25]);
   const opacity = useTransform(x, [-200, -100, 0, 100, 200], [0, 1, 1, 1, 0]);
+  const wrongIndicatorOpacity = useTransform(x, [-100, 0], [1, 0]);
+  const correctIndicatorOpacity = useTransform(x, [0, 100], [0, 1]);
+  const detailIndicatorOpacity = useTransform(y, [-100, 0], [1, 0]);
 
   useEffect(() => {
     loadCards();
@@ -353,7 +356,7 @@ const Review = () => {
         <motion.div
           className="absolute top-8 left-8 text-6xl font-bold text-destructive"
           style={{
-            opacity: useTransform(x, [-100, 0], [1, 0]),
+            opacity: wrongIndicatorOpacity,
           }}
         >
           ✗
@@ -361,7 +364,7 @@ const Review = () => {
         <motion.div
           className="absolute top-8 right-8 text-6xl font-bold text-success"
           style={{
-            opacity: useTransform(x, [0, 100], [0, 1]),
+            opacity: correctIndicatorOpacity,
           }}
         >
           ✓
@@ -369,7 +372,7 @@ const Review = () => {
         <motion.div
           className="absolute bottom-8 left-0 right-0 text-center text-2xl font-bold text-primary"
           style={{
-            opacity: useTransform(y, [-100, 0], [1, 0]),
+            opacity: detailIndicatorOpacity,
           }}
         >
           ↑ 詳細
