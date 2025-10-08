@@ -451,36 +451,30 @@ const Statistics = () => {
               </div>
             </div>
           </div>
-          <div className="flex items-end justify-between gap-2 h-40">
+          <div className="flex items-end justify-between gap-3 h-48">
             {weeklyProgress.map((data, index) => (
               <div key={index} className="flex-1 flex flex-col items-center gap-2">
-                <div className="text-xs font-medium space-y-0.5">
-                  <div className="text-teal">{data.learned}</div>
-                  <div className="text-success">{data.reviewed}</div>
+                <div className="text-xs font-semibold text-center min-h-[32px] flex flex-col justify-end gap-0.5">
+                  <div className="text-teal">{data.learned > 0 ? data.learned : ''}</div>
+                  <div className="text-success">{data.reviewed > 0 ? data.reviewed : ''}</div>
                 </div>
-                <div className="w-full bg-muted rounded-t-lg relative flex gap-0.5" style={{ height: "100%" }}>
+                <div className="w-full relative flex gap-1 items-end" style={{ height: "160px" }}>
                   <div
-                    className="flex-1 bg-teal rounded-tl-lg transition-all"
+                    className="flex-1 bg-teal rounded-t transition-all"
                     style={{ 
-                      height: `${maxProgress > 0 ? (data.learned / maxProgress) * 100 : 0}%`, 
-                      position: "absolute", 
-                      bottom: 0,
-                      left: 0,
-                      width: "48%"
+                      height: `${maxProgress > 0 ? (data.learned / maxProgress) * 100 : 0}%`,
+                      minHeight: data.learned > 0 ? "8px" : "0px"
                     }}
                   />
                   <div
-                    className="flex-1 bg-success rounded-tr-lg transition-all"
+                    className="flex-1 bg-success rounded-t transition-all"
                     style={{ 
-                      height: `${maxProgress > 0 ? (data.reviewed / maxProgress) * 100 : 0}%`, 
-                      position: "absolute", 
-                      bottom: 0,
-                      right: 0,
-                      width: "48%"
+                      height: `${maxProgress > 0 ? (data.reviewed / maxProgress) * 100 : 0}%`,
+                      minHeight: data.reviewed > 0 ? "8px" : "0px"
                     }}
                   />
                 </div>
-                <span className="text-xs text-muted-foreground">{progressLabels[index]}</span>
+                <span className="text-xs text-muted-foreground font-medium">{progressLabels[index]}</span>
               </div>
             ))}
           </div>
