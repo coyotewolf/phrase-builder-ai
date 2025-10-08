@@ -191,34 +191,61 @@ const Review = () => {
 
             {showAnswer && (
               <div className="space-y-4 animate-in fade-in duration-300">
-                {(currentCard.meaning_zh || currentCard.meaning_en) && (
-                  <div>
-                    <h3 className="font-semibold mb-2">釋義</h3>
-                    <p className="text-muted-foreground">
-                      {currentCard.meaning_zh || currentCard.meaning_en}
-                    </p>
+                {/* Simplified view with part of speech abbreviation */}
+                <div className="mb-4">
+                  {currentCard.meanings && currentCard.meanings.length > 0 && 
+                    currentCard.meanings.map((m, idx) => {
+                      const posAbbr = m.part_of_speech?.substring(0, 1) || '';
+                      return (
+                        <p key={idx} className="text-lg mb-1">
+                          <span className="font-medium">{posAbbr && `${posAbbr}. `}</span>
+                          {m.meaning_zh || m.meaning_en}
+                        </p>
+                      );
+                    })
+                  }
+                </div>
+
+                {/* Detailed view for each part of speech */}
+                {currentCard.meanings && currentCard.meanings.map((meaning, idx) => (
+                  <div key={idx} className="border-l-2 border-primary pl-4">
+                    <h3 className="font-semibold mb-2">
+                      {meaning.part_of_speech || `釋義 ${idx + 1}`}
+                    </h3>
+                    <div className="space-y-2">
+                      {meaning.meaning_zh && (
+                        <p className="text-muted-foreground">
+                          <span className="font-medium">中文：</span>{meaning.meaning_zh}
+                        </p>
+                      )}
+                      {meaning.meaning_en && (
+                        <p className="text-muted-foreground">
+                          <span className="font-medium">英文：</span>{meaning.meaning_en}
+                        </p>
+                      )}
+                      {meaning.examples && meaning.examples.length > 0 && (
+                        <div>
+                          <p className="font-medium text-sm mb-1">例句：</p>
+                          {meaning.examples.map((example, exIdx) => (
+                            <p key={exIdx} className="text-muted-foreground italic text-sm mb-1">
+                              • {example}
+                            </p>
+                          ))}
+                        </div>
+                      )}
+                      {meaning.synonyms && meaning.synonyms.length > 0 && (
+                        <p className="text-muted-foreground text-sm">
+                          <span className="font-medium">同義詞：</span>{meaning.synonyms.join(", ")}
+                        </p>
+                      )}
+                      {meaning.antonyms && meaning.antonyms.length > 0 && (
+                        <p className="text-muted-foreground text-sm">
+                          <span className="font-medium">反義詞：</span>{meaning.antonyms.join(", ")}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                )}
-                {currentCard.detail?.examples && currentCard.detail.examples.length > 0 && (
-                  <div>
-                    <h3 className="font-semibold mb-2">例句</h3>
-                    {currentCard.detail.examples.map((example, idx) => (
-                      <p key={idx} className="text-muted-foreground italic mb-1">{example}</p>
-                    ))}
-                  </div>
-                )}
-                {currentCard.detail?.synonyms && currentCard.detail.synonyms.length > 0 && (
-                  <div>
-                    <h3 className="font-semibold mb-2">同義詞</h3>
-                    <p className="text-muted-foreground">{currentCard.detail.synonyms.join(", ")}</p>
-                  </div>
-                )}
-                {currentCard.detail?.antonyms && currentCard.detail.antonyms.length > 0 && (
-                  <div>
-                    <h3 className="font-semibold mb-2">反義詞</h3>
-                    <p className="text-muted-foreground">{currentCard.detail.antonyms.join(", ")}</p>
-                  </div>
-                )}
+                ))}
               </div>
             )}
           </div>

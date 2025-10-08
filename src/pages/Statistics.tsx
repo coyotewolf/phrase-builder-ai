@@ -177,10 +177,10 @@ const Statistics = () => {
       for (const wordbook of allWordbooks) {
         const cards = await db.getCardsByWordbook(wordbook.id);
         for (const card of cards) {
-          const level = card.detail?.level || "Beginner";
-          const normalizedLevel = level.includes("TOEFL") || level.includes("IELTS") 
+          const level = wordbook.level || "Beginner";
+          const normalizedLevel = level.includes("TOEFL") || level.includes("IELTS") || level.includes("GRE")
             ? "Advanced" 
-            : level.includes("intermediate") 
+            : level.includes("大學") || level.includes("高中")
             ? "Intermediate" 
             : "Beginner";
 

@@ -2,15 +2,20 @@
  * Gemini API client for generating word details
  */
 
-export interface WordDetail {
-  headword: string;
-  part_of_speech?: string;
+export interface WordMeaning {
+  part_of_speech: string;
+  definition_zh?: string;
   definition_en: string;
   synonyms: string[];
   antonyms: string[];
   examples: string[];
-  ipa?: string;
   register?: string;
+}
+
+export interface WordDetail {
+  headword: string;
+  ipa?: string;
+  meanings: WordMeaning[];
   notes?: string;
 }
 
@@ -46,43 +51,59 @@ Words: ${words.join(', ')}
 Constraints: ${constraints}
 
 For each word, provide:
-1. Part of speech
-2. Clear English definition appropriate for ${level} learners
-3. Up to ${limits.examples} example sentences showing different meanings if the word has multiple definitions
-4. Up to ${limits.synonyms} synonyms that are as comprehensive as possible and appropriate for ${level} level
-5. Up to ${limits.antonyms} antonyms that are as comprehensive as possible (if applicable)
-6. IPA pronunciation
-7. Register/formality level (e.g., formal, informal, academic)
-8. Any important usage notes
+1. IPA pronunciation
+2. All major parts of speech (if a word has multiple uses like noun and verb)
+3. For EACH part of speech, provide:
+   - Chinese definition (Traditional Chinese, 繁體中文)
+   - Clear English definition appropriate for ${level} learners
+   - Up to ${limits.synonyms} synonyms (comprehensive, appropriate for ${level})
+   - Up to ${limits.antonyms} antonyms (if applicable)
+   - Up to ${limits.examples} example sentences
+   - Register/formality level
+4. Any important usage notes for the word overall
 
 IMPORTANT: 
-- If the word has multiple meanings, provide at least one example sentence for each major meaning
-- Try to provide as many relevant synonyms and antonyms as possible within the limits
-- Make sure all synonyms and antonyms are appropriate for ${level} learners
+- If a word has multiple parts of speech (e.g., "test" as noun and verb), create SEPARATE entries in the meanings array
+- For each part of speech, provide at least one example sentence
+- Try to provide comprehensive synonyms and antonyms within limits
+- Make sure all content is appropriate for ${level} learners
+- Chinese definitions should be in Traditional Chinese (繁體中文)
 
 Return ONLY a valid JSON array with this exact structure:
 [
   {
-    "headword": "rescind",
-    "part_of_speech": "verb",
-    "definition_en": "to cancel or repeal officially",
-    "synonyms": ["revoke", "repeal", "annul"],
-    "antonyms": ["enact", "authorize"],
-    "examples": ["The board voted to rescind the policy.", "They rescinded his offer after the background check."],
-    "ipa": "/rɪˈsɪnd/",
-    "register": "formal",
-    "notes": "Often used in legal or official contexts"
+    "headword": "test",
+    "ipa": "/test/",
+    "meanings": [
+      {
+        "part_of_speech": "noun",
+        "definition_zh": "測驗；考試",
+        "definition_en": "a procedure to establish quality, performance, or reliability",
+        "synonyms": ["exam", "examination", "assessment"],
+        "antonyms": [],
+        "examples": ["She passed her driving test on the first try."],
+        "register": "neutral"
+      },
+      {
+        "part_of_speech": "verb",
+        "definition_zh": "測試；檢驗",
+        "definition_en": "to try or examine something to see if it works",
+        "synonyms": ["examine", "check", "try out"],
+        "antonyms": [],
+        "examples": ["We need to test the new software before release."],
+        "register": "neutral"
+      }
+    ],
+    "notes": "Commonly used in both academic and everyday contexts"
   }
 ]
 
 Important:
 - Return ONLY the JSON array, no additional text or markdown
 - Include all ${words.length} words in the response
-- Keep definitions clear and appropriate for ${level} learners
-- Provide practical example sentences
-- If a word has no common antonyms, use an empty array
-- Include register information (formal/informal/neutral/academic)
-- Add usage notes if relevant`;
+- Each word should have a meanings array with all its major parts of speech
+- Provide Chinese definitions in Traditional Chinese
+- Keep definitions clear and appropriate for ${level} learners`;
 
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,

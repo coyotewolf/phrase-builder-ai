@@ -11,24 +11,24 @@ export interface Wordbook {
   updated_at: string;
 }
 
+export interface CardMeaning {
+  part_of_speech: string;
+  meaning_zh?: string;
+  meaning_en?: string;
+  synonyms: string[];
+  antonyms: string[];
+  examples: string[];
+}
+
 export interface Card {
   id: string;
   wordbook_id: string;
   headword: string;
   phonetic?: string;
-  part_of_speech?: string;
-  meaning_zh?: string;
-  meaning_en?: string;
+  meanings: CardMeaning[];
   notes?: string;
   star: boolean;
   image_uri?: string;
-  detail?: {
-    synonyms: string[];
-    antonyms: string[];
-    examples: string[];
-    level?: string;
-    ipa?: string;
-  };
   tags: string[];
   created_at: string;
   updated_at: string;

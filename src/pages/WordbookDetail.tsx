@@ -34,13 +34,22 @@ const WordbookDetail = () => {
   const [selectedCard, setSelectedCard] = useState<VocabCard | null>(null);
   const [newWord, setNewWord] = useState("");
   const [newPhonetic, setNewPhonetic] = useState("");
-  const [newPartOfSpeech, setNewPartOfSpeech] = useState("");
-  const [newMeaningZh, setNewMeaningZh] = useState("");
-  const [newMeaningEn, setNewMeaningEn] = useState("");
+  const [newMeanings, setNewMeanings] = useState<Array<{
+    part_of_speech: string;
+    meaning_zh: string;
+    meaning_en: string;
+    synonyms: string[];
+    antonyms: string[];
+    examples: string[];
+  }>>([{
+    part_of_speech: "",
+    meaning_zh: "",
+    meaning_en: "",
+    synonyms: [],
+    antonyms: [],
+    examples: [],
+  }]);
   const [newNotes, setNewNotes] = useState("");
-  const [newSynonyms, setNewSynonyms] = useState<string[]>([]);
-  const [newAntonyms, setNewAntonyms] = useState<string[]>([]);
-  const [newExamples, setNewExamples] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -79,31 +88,25 @@ const WordbookDetail = () => {
         wordbook_id: id,
         headword: newWord,
         phonetic: newPhonetic || undefined,
-        part_of_speech: newPartOfSpeech || undefined,
-        meaning_zh: newMeaningZh || undefined,
-        meaning_en: newMeaningEn || undefined,
+        meanings: newMeanings,
         notes: newNotes || undefined,
         star: false,
         tags: [],
-        detail: {
-          synonyms: newSynonyms,
-          antonyms: newAntonyms,
-          examples: newExamples,
-          ipa: newPhonetic || undefined,
-        },
       });
       
       toast.success("單字卡已新增");
       setIsAddDialogOpen(false);
       setNewWord("");
       setNewPhonetic("");
-      setNewPartOfSpeech("");
-      setNewMeaningZh("");
-      setNewMeaningEn("");
+      setNewMeanings([{
+        part_of_speech: "",
+        meaning_zh: "",
+        meaning_en: "",
+        synonyms: [],
+        antonyms: [],
+        examples: [],
+      }]);
       setNewNotes("");
-      setNewSynonyms([]);
-      setNewAntonyms([]);
-      setNewExamples([]);
       loadData();
     } catch (error) {
       console.error("Failed to create card:", error);
@@ -139,11 +142,14 @@ const WordbookDetail = () => {
       if (details && details.length > 0) {
         const detail = details[0];
         setNewPhonetic(detail.ipa || "");
-        setNewPartOfSpeech(detail.part_of_speech || "");
-        setNewMeaningEn(detail.definition_en || "");
-        setNewSynonyms(detail.synonyms || []);
-        setNewAntonyms(detail.antonyms || []);
-        setNewExamples(detail.examples || []);
+        setNewMeanings(detail.meanings.map(m => ({
+          part_of_speech: m.part_of_speech,
+          meaning_zh: m.definition_zh || "",
+          meaning_en: m.definition_en || "",
+          synonyms: m.synonyms || [],
+          antonyms: m.antonyms || [],
+          examples: m.examples || [],
+        })));
         setNewNotes(detail.notes || "");
       }
       
@@ -212,17 +218,17 @@ const WordbookDetail = () => {
         await db.createCard({
           wordbook_id: id,
           headword: csvCard.headword,
-          meaning_zh: csvCard.meaning_zh,
-          meaning_en: csvCard.meaning_en,
           phonetic: csvCard.ipa,
-          star: false,
-          tags: [],
-          detail: {
+          meanings: [{
+            part_of_speech: (csvCard as any).part_of_speech || "",
+            meaning_zh: csvCard.meaning_zh,
+            meaning_en: csvCard.meaning_en,
             synonyms: [],
             antonyms: [],
             examples: [],
-            ipa: csvCard.ipa,
-          },
+          }],
+          star: false,
+          tags: [],
         });
       }
       
@@ -344,15 +350,15 @@ const WordbookDetail = () => {
                     {card.phonetic}
                   </p>
                 )}
-                {card.meaning_zh && (
-                  <p className="text-sm text-muted-foreground line-clamp-3">
-                    {card.meaning_zh}
-                  </p>
-                )}
-                {card.meaning_en && (
-                  <p className="text-sm text-muted-foreground line-clamp-2">
-                    {card.meaning_en}
-                  </p>
+                {card.meanings && card.meanings.length > 0 && (
+                  <div className="space-y-1">
+                    {card.meanings.map((meaning, idx) => (
+                      <p key={idx} className="text-sm text-muted-foreground">
+                        {meaning.part_of_speech && `${meaning.part_of_speech}. `}
+                        {meaning.meaning_zh || meaning.meaning_en}
+                      </p>
+                    ))}
+                  </div>
                 )}
               </Card>
             ))}
@@ -374,7 +380,7 @@ const WordbookDetail = () => {
                   <div className="flex gap-2">
                     <Input
                       id="word"
-                      placeholder="例如：rescind"
+                      placeholder="例如：test"
                       value={newWord}
                       onChange={(e) => setNewWord(e.target.value)}
                     />
@@ -382,7 +388,7 @@ const WordbookDetail = () => {
                       variant="outline"
                       onClick={handleGenerateDetails}
                       disabled={isGenerating || !newWord.trim()}
-                      title="使用 AI 生成詳情"
+                      title="使用 AI 生成詳情（支持多詞性）"
                     >
                       <Sparkles className="h-4 w-4" />
                     </Button>
@@ -394,139 +400,15 @@ const WordbookDetail = () => {
                     id="phonetic"
                     value={newPhonetic}
                     onChange={(e) => setNewPhonetic(e.target.value)}
-                    placeholder="/rɪˈsɪnd/"
+                    placeholder="/test/"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="pos">詞性</Label>
-                <Input
-                  id="pos"
-                  value={newPartOfSpeech}
-                  onChange={(e) => setNewPartOfSpeech(e.target.value)}
-                  placeholder="noun, verb, adjective..."
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="meaning-zh">中文釋義</Label>
-                <Textarea
-                  id="meaning-zh"
-                  value={newMeaningZh}
-                  onChange={(e) => setNewMeaningZh(e.target.value)}
-                  rows={2}
-                  placeholder="撤銷；廢除"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="meaning-en">英文定義</Label>
-                <Textarea
-                  id="meaning-en"
-                  value={newMeaningEn}
-                  onChange={(e) => setNewMeaningEn(e.target.value)}
-                  rows={2}
-                  placeholder="to cancel or repeal officially"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>同義詞</Label>
-                <div className="flex gap-2 flex-wrap mb-2">
-                  {newSynonyms.map((syn, idx) => (
-                    <span key={idx} className="inline-flex items-center gap-1 px-2 py-1 bg-secondary text-secondary-foreground rounded-md text-sm">
-                      {syn}
-                      <button
-                        type="button"
-                        onClick={() => setNewSynonyms(newSynonyms.filter((_, i) => i !== idx))}
-                        className="hover:text-destructive"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="輸入同義詞後按 Enter"
-                    onKeyPress={(e) => {
-                      if (e.key === "Enter") {
-                        const input = e.currentTarget;
-                        if (input.value.trim()) {
-                          setNewSynonyms([...newSynonyms, input.value.trim()]);
-                          input.value = "";
-                        }
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>反義詞</Label>
-                <div className="flex gap-2 flex-wrap mb-2">
-                  {newAntonyms.map((ant, idx) => (
-                    <span key={idx} className="inline-flex items-center gap-1 px-2 py-1 bg-secondary text-secondary-foreground rounded-md text-sm">
-                      {ant}
-                      <button
-                        type="button"
-                        onClick={() => setNewAntonyms(newAntonyms.filter((_, i) => i !== idx))}
-                        className="hover:text-destructive"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="輸入反義詞後按 Enter"
-                    onKeyPress={(e) => {
-                      if (e.key === "Enter") {
-                        const input = e.currentTarget;
-                        if (input.value.trim()) {
-                          setNewAntonyms([...newAntonyms, input.value.trim()]);
-                          input.value = "";
-                        }
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>例句</Label>
-                <div className="space-y-2 mb-2">
-                  {newExamples.map((ex, idx) => (
-                    <div key={idx} className="flex items-start gap-2 p-2 bg-muted rounded">
-                      <p className="flex-1 text-sm">{ex}</p>
-                      <button
-                        type="button"
-                        onClick={() => setNewExamples(newExamples.filter((_, i) => i !== idx))}
-                        className="hover:text-destructive"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <Textarea
-                    placeholder="輸入例句"
-                    rows={2}
-                    onKeyPress={(e) => {
-                      if (e.key === "Enter" && e.ctrlKey) {
-                        const input = e.currentTarget;
-                        if (input.value.trim()) {
-                          setNewExamples([...newExamples, input.value.trim()]);
-                          input.value = "";
-                        }
-                      }
-                    }}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">按 Ctrl+Enter 新增例句</p>
+                <p className="text-sm text-muted-foreground">
+                  AI 會自動識別多詞性並分別生成釋義
+                </p>
               </div>
 
               <div className="space-y-2">
