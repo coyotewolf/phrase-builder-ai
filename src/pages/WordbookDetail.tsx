@@ -348,8 +348,8 @@ const WordbookDetail = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 p-6">
-      <div className="mx-auto max-w-6xl space-y-6">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 pb-20">
+      <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/wordbooks")}>
