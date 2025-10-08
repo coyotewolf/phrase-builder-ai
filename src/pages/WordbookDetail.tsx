@@ -835,9 +835,6 @@ const WordbookDetail = () => {
                           : 'hover:ring-2 hover:ring-primary/50'
                         : 'hover:shadow-lg'
                     }`}
-                    style={{
-                      touchAction: isSelectionMode ? 'none' : 'auto'
-                    }}
                     onTouchStart={(e) => {
                       handleCardTouchStart(card.id, e);
                     }}
