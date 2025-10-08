@@ -29,7 +29,8 @@ const Statistics = () => {
   const [dailyGoal, setDailyGoal] = useState(50);
   const [streakDays, setStreakDays] = useState(0);
   const [weeklyAccuracy, setWeeklyAccuracy] = useState(0);
-  const [weeklyProgress, setWeeklyProgress] = useState<number[]>([45, 38, 52, 41, 47, 35, 32]);
+  const [weeklyProgress, setWeeklyProgress] = useState<{ learned: number; reviewed: number }[]>([]);
+  const [progressLabels, setProgressLabels] = useState<string[]>([]);
   const [progressByLevel, setProgressByLevel] = useState<ProgressByLevel[]>([
     { level: "Beginner", current: 85, total: 100, percentage: 85, color: "bg-teal" },
     { level: "Intermediate", current: 120, total: 150, percentage: 80, color: "bg-yellow" },
@@ -191,40 +192,122 @@ const Statistics = () => {
       setStreakDays(streak);
 
       /**
-       * 5. 每週進度圖表
-       * 演算法：統計最近7天每天複習的卡片數量
-       * 資料結構：[6天前, 5天前, ..., 昨天, 今天]
-       * 計算方式：對每一天，計算 last_reviewed_at 在該天的卡片數量
-       * 優化：使用 Map 來儲存每天的計數
+       * 5. 進度圖表（每週/每月）
+       * 演算法：
+       * - 7天模式：統計最近7天每天的學習和複習數量
+       * - 30天模式：統計4週的學習和複習數量
+       * 
+       * 學習 vs 複習的定義：
+       * - 學習：卡片首次加入（created_at 日期）
+       * - 複習：卡片被複習（last_reviewed_at 日期，且不等於 created_at 日期）
        */
-      const dailyCounts = new Map<string, number>();
       
-      for (const { stats } of allCardsWithStats) {
-        if (stats?.last_reviewed_at) {
-          const reviewDate = new Date(stats.last_reviewed_at);
-          reviewDate.setHours(0, 0, 0, 0);
-          const dateKey = reviewDate.toISOString();
-          dailyCounts.set(dateKey, (dailyCounts.get(dateKey) || 0) + 1);
+      if (activeTab === "7days" || activeTab === "all") {
+        // 7天模式：每天顯示
+        const dailyLearned = new Map<string, Set<string>>();
+        const dailyReviewed = new Map<string, Set<string>>();
+        
+        for (const { card, stats } of allCardsWithStats) {
+          // 學習：卡片創建日期
+          const createdDate = new Date(card.created_at);
+          createdDate.setHours(0, 0, 0, 0);
+          const createdKey = createdDate.toISOString();
+          
+          if (!dailyLearned.has(createdKey)) dailyLearned.set(createdKey, new Set());
+          dailyLearned.get(createdKey)!.add(card.id);
+          
+          // 複習：最後複習日期（如果存在且不等於創建日期）
+          if (stats?.last_reviewed_at) {
+            const reviewDate = new Date(stats.last_reviewed_at);
+            reviewDate.setHours(0, 0, 0, 0);
+            const reviewKey = reviewDate.toISOString();
+            
+            // 只有當複習日期不同於創建日期時才算作複習
+            if (reviewKey !== createdKey) {
+              if (!dailyReviewed.has(reviewKey)) dailyReviewed.set(reviewKey, new Set());
+              dailyReviewed.get(reviewKey)!.add(card.id);
+            }
+          }
         }
+        
+        const progressData: { learned: number; reviewed: number }[] = [];
+        const labels: string[] = [];
+        const days = activeTab === "7days" ? 7 : 30;
+        
+        for (let i = days - 1; i >= 0; i--) {
+          const checkDate = new Date();
+          checkDate.setDate(checkDate.getDate() - i);
+          checkDate.setHours(0, 0, 0, 0);
+          const dateKey = checkDate.toISOString();
+          
+          progressData.push({
+            learned: dailyLearned.get(dateKey)?.size || 0,
+            reviewed: dailyReviewed.get(dateKey)?.size || 0
+          });
+          
+          const dayOfWeek = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"][checkDate.getDay()];
+          labels.push(dayOfWeek);
+        }
+        
+        setWeeklyProgress(progressData);
+        setProgressLabels(labels);
+        
+      } else {
+        // 30天模式：按週顯示
+        const weeklyLearned = [new Set<string>(), new Set<string>(), new Set<string>(), new Set<string>()];
+        const weeklyReviewed = [new Set<string>(), new Set<string>(), new Set<string>(), new Set<string>()];
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        for (const { card, stats } of allCardsWithStats) {
+          // 學習：卡片創建日期
+          const createdDate = new Date(card.created_at);
+          createdDate.setHours(0, 0, 0, 0);
+          const daysAgoCreated = Math.floor((today.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
+          
+          if (daysAgoCreated >= 0 && daysAgoCreated < 30) {
+            const weekIndex = 3 - Math.floor(daysAgoCreated / 7);
+            if (weekIndex >= 0 && weekIndex < 4) {
+              weeklyLearned[weekIndex].add(card.id);
+            }
+          }
+          
+          // 複習：最後複習日期
+          if (stats?.last_reviewed_at) {
+            const reviewDate = new Date(stats.last_reviewed_at);
+            reviewDate.setHours(0, 0, 0, 0);
+            const daysAgoReview = Math.floor((today.getTime() - reviewDate.getTime()) / (1000 * 60 * 60 * 24));
+            
+            // 只有當複習日期不同於創建日期時才算作複習
+            const createdKey = createdDate.toISOString();
+            const reviewKey = reviewDate.toISOString();
+            
+            if (reviewKey !== createdKey && daysAgoReview >= 0 && daysAgoReview < 30) {
+              const weekIndex = 3 - Math.floor(daysAgoReview / 7);
+              if (weekIndex >= 0 && weekIndex < 4) {
+                weeklyReviewed[weekIndex].add(card.id);
+              }
+            }
+          }
+        }
+        
+        const progressData: { learned: number; reviewed: number }[] = weeklyLearned.map((learnedSet, index) => ({
+          learned: learnedSet.size,
+          reviewed: weeklyReviewed[index].size
+        }));
+        
+        setWeeklyProgress(progressData);
+        setProgressLabels(["第一週", "第二週", "第三週", "第四週"]);
       }
-      
-      const progressData: number[] = [];
-      for (let i = 6; i >= 0; i--) {
-        const checkDate = new Date();
-        checkDate.setDate(checkDate.getDate() - i);
-        checkDate.setHours(0, 0, 0, 0);
-        const dateKey = checkDate.toISOString();
-        progressData.push(dailyCounts.get(dateKey) || 0);
-      }
-      setWeeklyProgress(progressData);
 
       /**
        * 6. 各程度進度
        * 演算法：按難度分級統計掌握情況
-       * 分級規則：
-       * - Advanced: TOEFL/IELTS/GRE
-       * - Intermediate: 大學/高中
-       * - Beginner: 其他
+       * 分級規則（新）：
+       * - Beginner: 國小、國中、高中
+       * - Intermediate: 大學、TOEFL、IELTS
+       * - Advanced: GRE、其他
        * 
        * 掌握標準：right_count > wrong_count
        * 百分比 = (已掌握數量 / 總數量) × 100%
@@ -247,12 +330,13 @@ const Statistics = () => {
         // 如果沒有統計數據且有時間限制，跳過此卡片
         if (startDate && !stats) continue;
         
-        const level = wordbook.level || "Beginner";
-        const normalizedLevel = level.includes("TOEFL") || level.includes("IELTS") || level.includes("GRE")
-          ? "Advanced" 
-          : level.includes("大學") || level.includes("高中")
-          ? "Intermediate" 
-          : "Beginner";
+        const level = wordbook.level || "Advanced";
+        const normalizedLevel = 
+          level.includes("國小") || level.includes("國中") || level.includes("高中")
+            ? "Beginner"
+          : level.includes("大學") || level.includes("TOEFL") || level.includes("IELTS")
+            ? "Intermediate"
+            : "Advanced"; // GRE 和其他都歸類為 Advanced
 
         if (levelStats[normalizedLevel]) {
           levelStats[normalizedLevel].total++;
@@ -264,14 +348,19 @@ const Statistics = () => {
         }
       }
 
-      const levelProgress: ProgressByLevel[] = Object.entries(levelStats).map(([level, data]) => ({
-        level,
-        current: data.current,
-        total: data.total,
-        percentage: data.total > 0 ? Math.round((data.current / data.total) * 100) : 0,
-        color: level === "Beginner" ? "bg-teal" : level === "Intermediate" ? "bg-yellow" : "bg-destructive",
-      }));
-      setProgressByLevel(levelProgress.filter(l => l.total > 0)); // 只顯示有資料的級別
+      // 按優先級排序：Beginner > Intermediate > Advanced
+      const levelOrder = ["Beginner", "Intermediate", "Advanced"];
+      const levelProgress: ProgressByLevel[] = levelOrder
+        .map(level => ({
+          level,
+          current: levelStats[level].current,
+          total: levelStats[level].total,
+          percentage: levelStats[level].total > 0 ? Math.round((levelStats[level].current / levelStats[level].total) * 100) : 0,
+          color: level === "Beginner" ? "bg-teal" : level === "Intermediate" ? "bg-yellow" : "bg-destructive",
+        }))
+        .filter(l => l.total > 0); // 只顯示有資料的級別
+      
+      setProgressByLevel(levelProgress);
       
     } catch (error) {
       console.error("Failed to load statistics:", error);
@@ -286,8 +375,7 @@ const Statistics = () => {
     { value: "all", label: "全部" },
   ];
 
-  const weekDays = ["週一", "週二", "週三", "週四", "週五", "週六", "週日"];
-  const maxProgress = Math.max(...weeklyProgress);
+  const maxProgress = Math.max(...weeklyProgress.map(p => Math.max(p.learned, p.reviewed)));
 
   return (
     <div className="min-h-screen bg-background pb-20 overflow-x-hidden">
@@ -346,22 +434,53 @@ const Statistics = () => {
           </Card>
         </div>
 
-        {/* Weekly Progress Chart */}
+        {/* Progress Chart */}
         <Card className="p-6 space-y-4">
-          <h2 className="text-lg font-semibold">每週進度</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">
+              {activeTab === "30days" ? "每月進度" : "每週進度"}
+            </h2>
+            <div className="flex gap-4 text-xs">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-teal rounded"></div>
+                <span>學習</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-success rounded"></div>
+                <span>複習</span>
+              </div>
+            </div>
+          </div>
           <div className="flex items-end justify-between gap-2 h-40">
-            {weeklyProgress.map((value, index) => (
+            {weeklyProgress.map((data, index) => (
               <div key={index} className="flex-1 flex flex-col items-center gap-2">
-                <span className="text-sm font-medium">{value}</span>
-                <div className="w-full bg-muted rounded-t-lg relative" style={{ height: "100%" }}>
+                <div className="text-xs font-medium space-y-0.5">
+                  <div className="text-teal">{data.learned}</div>
+                  <div className="text-success">{data.reviewed}</div>
+                </div>
+                <div className="w-full bg-muted rounded-t-lg relative flex gap-0.5" style={{ height: "100%" }}>
                   <div
-                    className={`w-full rounded-t-lg transition-all ${
-                      index === 2 ? "bg-success" : "bg-muted-foreground/30"
-                    }`}
-                    style={{ height: `${(value / maxProgress) * 100}%`, position: "absolute", bottom: 0 }}
+                    className="flex-1 bg-teal rounded-tl-lg transition-all"
+                    style={{ 
+                      height: `${maxProgress > 0 ? (data.learned / maxProgress) * 100 : 0}%`, 
+                      position: "absolute", 
+                      bottom: 0,
+                      left: 0,
+                      width: "48%"
+                    }}
+                  />
+                  <div
+                    className="flex-1 bg-success rounded-tr-lg transition-all"
+                    style={{ 
+                      height: `${maxProgress > 0 ? (data.reviewed / maxProgress) * 100 : 0}%`, 
+                      position: "absolute", 
+                      bottom: 0,
+                      right: 0,
+                      width: "48%"
+                    }}
                   />
                 </div>
-                <span className="text-xs text-muted-foreground">{weekDays[index]}</span>
+                <span className="text-xs text-muted-foreground">{progressLabels[index]}</span>
               </div>
             ))}
           </div>
