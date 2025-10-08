@@ -211,12 +211,12 @@ const Statistics = () => {
   };
 
   const tabs: { value: TimeRange; label: string }[] = [
-    { value: "7days", label: "7 Days" },
-    { value: "30days", label: "30 Days" },
-    { value: "all", label: "All Time" },
+    { value: "7days", label: "7 天" },
+    { value: "30days", label: "30 天" },
+    { value: "all", label: "全部" },
   ];
 
-  const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const weekDays = ["週一", "週二", "週三", "週四", "週五", "週六", "週日"];
   const maxProgress = Math.max(...weeklyProgress);
 
   return (
@@ -224,7 +224,7 @@ const Statistics = () => {
       <div className="p-4 sm:p-6 space-y-6">
         {/* Header with Tabs */}
         <div className="space-y-4">
-          <h1 className="text-3xl font-bold">Statistics</h1>
+          <h1 className="text-3xl font-bold">統計</h1>
           <div className="flex gap-2">
             {tabs.map((tab) => (
               <Button
@@ -247,8 +247,8 @@ const Statistics = () => {
             </div>
             <p className="text-3xl font-bold">{todayCount}</p>
             <div>
-              <p className="text-xs font-medium">Today</p>
-              <p className="text-xs text-muted-foreground">Goal: {dailyGoal}</p>
+              <p className="text-xs font-medium">今日</p>
+              <p className="text-xs text-muted-foreground">目標：{dailyGoal}</p>
             </div>
           </Card>
 
@@ -258,9 +258,9 @@ const Statistics = () => {
             </div>
             <p className="text-3xl font-bold">{streakDays}</p>
             <div>
-              <p className="text-xs font-medium">days</p>
-              <p className="text-xs text-muted-foreground">Streak</p>
-              <p className="text-xs text-success">Keep it up!</p>
+              <p className="text-xs font-medium">天</p>
+              <p className="text-xs text-muted-foreground">連續</p>
+              <p className="text-xs text-success">繼續加油！</p>
             </div>
           </Card>
 
@@ -270,15 +270,15 @@ const Statistics = () => {
             </div>
             <p className="text-3xl font-bold">{weeklyAccuracy}%</p>
             <div>
-              <p className="text-xs font-medium">Accuracy</p>
-              <p className="text-xs text-muted-foreground">Last 7 days</p>
+              <p className="text-xs font-medium">準確率</p>
+              <p className="text-xs text-muted-foreground">最近 7 天</p>
             </div>
           </Card>
         </div>
 
         {/* Weekly Progress Chart */}
         <Card className="p-6 space-y-4">
-          <h2 className="text-lg font-semibold">Weekly Progress</h2>
+          <h2 className="text-lg font-semibold">每週進度</h2>
           <div className="flex items-end justify-between gap-2 h-40">
             {weeklyProgress.map((value, index) => (
               <div key={index} className="flex-1 flex flex-col items-center gap-2">
@@ -299,14 +299,14 @@ const Statistics = () => {
 
         {/* Progress by Level */}
         <Card className="p-6 space-y-4">
-          <h2 className="text-lg font-semibold">Progress by Level</h2>
+          <h2 className="text-lg font-semibold">各程度進度</h2>
           <div className="space-y-4">
             {progressByLevel.map((level) => (
               <div key={level.level} className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-medium">{level.level}</span>
                   <span className="text-muted-foreground">
-                    {level.current} / {level.total} words ({level.percentage}%)
+                    {level.current} / {level.total} 個單字 ({level.percentage}%)
                   </span>
                 </div>
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
@@ -322,7 +322,7 @@ const Statistics = () => {
 
         {/* Words to Review */}
         <Card className="p-6 space-y-4">
-          <h2 className="text-lg font-semibold">Words to Review</h2>
+          <h2 className="text-lg font-semibold">需要複習的單字</h2>
           {isLoading ? (
             <p className="text-center text-muted-foreground py-4">載入中...</p>
           ) : errorCards.length === 0 ? (
@@ -339,11 +339,11 @@ const Statistics = () => {
                   <div className="flex-1">
                     <p className="font-medium">{card.headword}</p>
                     <p className="text-xs text-muted-foreground">
-                      {stats.shown_count} attempts
+                      {stats.shown_count} 次嘗試
                     </p>
                   </div>
                   <span className="px-3 py-1 bg-destructive/20 text-destructive text-sm font-medium rounded-full">
-                    {errorRate.toFixed(0)}% errors
+                    {errorRate.toFixed(0)}% 錯誤率
                   </span>
                 </div>
               ))}

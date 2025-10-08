@@ -13,23 +13,23 @@ export function NotificationsSheet({ open, onOpenChange }: NotificationsSheetPro
   const notifications = [
     {
       id: 1,
-      title: "Time to review!",
-      message: "You have 15 cards due for review today",
-      time: "2 hours ago",
+      title: "該複習了！",
+      message: "你今天有 15 張卡片待複習",
+      time: "2 小時前",
       read: false,
     },
     {
       id: 2,
-      title: "Daily goal reached!",
-      message: "Congratulations! You've completed your daily goal of 100 words",
-      time: "1 day ago",
+      title: "達成每日目標！",
+      message: "恭喜！你已完成今日 100 個單字的目標",
+      time: "1 天前",
       read: true,
     },
     {
       id: 3,
-      title: "New wordbook created",
-      message: "TOEFL Vocabulary has been added to your collection",
-      time: "2 days ago",
+      title: "新增單詞書",
+      message: "托福詞彙已加入你的收藏",
+      time: "2 天前",
       read: true,
     },
   ];
@@ -40,14 +40,14 @@ export function NotificationsSheet({ open, onOpenChange }: NotificationsSheetPro
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <Bell className="h-5 w-5" />
-            Notifications
+            通知
           </SheetTitle>
         </SheetHeader>
         <ScrollArea className="h-[calc(100vh-8rem)] mt-6">
           {notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 text-center">
               <Bell className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">No notifications yet</p>
+              <p className="text-muted-foreground">尚無通知</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -77,7 +77,7 @@ export function NotificationsSheet({ open, onOpenChange }: NotificationsSheetPro
           <div className="absolute bottom-6 left-6 right-6">
             <Button variant="outline" className="w-full">
               <CheckCheck className="h-4 w-4 mr-2" />
-              Mark all as read
+              全部標記為已讀
             </Button>
           </div>
         )}

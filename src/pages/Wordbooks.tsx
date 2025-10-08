@@ -122,7 +122,7 @@ const Wordbooks = () => {
     <div className="min-h-screen bg-background pb-20 overflow-x-hidden">
       <div className="p-4 sm:p-6 space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Wordbooks</h1>
+          <h1 className="text-3xl font-bold">單詞書</h1>
           <Button
             size="icon"
             className="rounded-2xl"
@@ -172,12 +172,12 @@ const Wordbooks = () => {
                     <div className="flex items-center gap-4 text-sm">
                       <span className="flex items-center gap-1 text-muted-foreground">
                         <BookOpen className="h-4 w-4" />
-                        {wordbook.cardCount} cards
+                        {wordbook.cardCount} 張卡片
                       </span>
                       {wordbook.dueCount > 0 && (
                         <span className="flex items-center gap-1 text-destructive">
                           <Clock className="h-4 w-4" />
-                          {wordbook.dueCount} due
+                          {wordbook.dueCount} 待複習
                         </span>
                       )}
                     </div>

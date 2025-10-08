@@ -6,10 +6,10 @@ const BottomNav = () => {
   const location = useLocation();
 
   const navItems = [
-    { icon: Home, label: "Home", path: "/" },
-    { icon: BookOpen, label: "Wordbooks", path: "/wordbooks" },
-    { icon: BarChart3, label: "Statistics", path: "/statistics" },
-    { icon: Settings, label: "Settings", path: "/settings" },
+    { icon: Home, label: "首頁", path: "/" },
+    { icon: BookOpen, label: "單詞書", path: "/wordbooks" },
+    { icon: BarChart3, label: "統計", path: "/statistics" },
+    { icon: Settings, label: "設定", path: "/settings" },
   ];
 
   const isActive = (path: string) => {

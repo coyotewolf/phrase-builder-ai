@@ -13,10 +13,10 @@ export function SideMenu({ open, onOpenChange }: SideMenuProps) {
   const navigate = useNavigate();
 
   const menuItems = [
-    { icon: Home, label: "Home", path: "/" },
-    { icon: BookOpen, label: "Wordbooks", path: "/wordbooks" },
-    { icon: BarChart3, label: "Statistics", path: "/statistics" },
-    { icon: Settings, label: "Settings", path: "/settings" },
+    { icon: Home, label: "首頁", path: "/" },
+    { icon: BookOpen, label: "單詞書", path: "/wordbooks" },
+    { icon: BarChart3, label: "統計", path: "/statistics" },
+    { icon: Settings, label: "設定", path: "/settings" },
   ];
 
   const handleNavigate = (path: string) => {
@@ -51,7 +51,7 @@ export function SideMenu({ open, onOpenChange }: SideMenuProps) {
               onClick={() => window.open("https://github.com", "_blank")}
             >
               <Github className="h-4 w-4 mr-3" />
-              GitHub
+              GitHub 專案
             </Button>
             <Button
               variant="ghost"
@@ -59,11 +59,11 @@ export function SideMenu({ open, onOpenChange }: SideMenuProps) {
               onClick={() => handleNavigate("/about")}
             >
               <Info className="h-4 w-4 mr-3" />
-              About
+              關於
             </Button>
           </div>
           <div className="text-xs text-muted-foreground text-center">
-            Version 1.0.0
+            版本 1.0.0
           </div>
         </div>
       </SheetContent>

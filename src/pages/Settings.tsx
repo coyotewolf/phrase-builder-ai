@@ -103,11 +103,11 @@ const Settings = () => {
   return (
     <div className="min-h-screen bg-background pb-20 overflow-x-hidden">
       <div className="p-4 sm:p-6 space-y-6">
-        <h1 className="text-3xl font-bold">Settings</h1>
+        <h1 className="text-3xl font-bold">設定</h1>
 
         {/* Study Section */}
         <div className="space-y-3">
-          <h2 className="text-sm font-semibold text-muted-foreground">Study</h2>
+          <h2 className="text-sm font-semibold text-muted-foreground">學習</h2>
           
           <Card className="p-4">
             <button
@@ -119,8 +119,8 @@ const Settings = () => {
                   <Target className="h-5 w-5" />
                 </div>
                 <div className="text-left">
-                  <p className="font-medium">Daily Goal</p>
-                  <p className="text-sm text-muted-foreground">{settings.daily_goal} words per day</p>
+                  <p className="font-medium">每日目標</p>
+                  <p className="text-sm text-muted-foreground">每天 {settings.daily_goal} 個單字</p>
                 </div>
               </div>
               <ChevronRight className="h-5 w-5 text-muted-foreground" />
@@ -137,10 +137,10 @@ const Settings = () => {
                   <Globe className="h-5 w-5" />
                 </div>
                 <div className="text-left">
-                  <p className="font-medium">Display Direction</p>
+                  <p className="font-medium">顯示方向</p>
                   <p className="text-sm text-muted-foreground">
-                    {settings.display_direction === 'zh-en' ? 'Chinese → English' : 
-                     settings.display_direction === 'random' ? 'Random' : 'English → Chinese'}
+                    {settings.display_direction === 'zh-en' ? '中文 → 英文' : 
+                     settings.display_direction === 'random' ? '隨機' : '英文 → 中文'}
                   </p>
                 </div>
               </div>
@@ -158,9 +158,9 @@ const Settings = () => {
                   <Volume2 className="h-5 w-5" />
                 </div>
                 <div className="text-left">
-                  <p className="font-medium">Text-to-Speech</p>
+                  <p className="font-medium">語音播放</p>
                   <p className="text-sm text-muted-foreground">
-                    {settings.tts_enabled ? 'Enabled' : 'Disabled'} • {settings.tts_voice === 'en-GB' ? 'British' : 'American'}
+                    {settings.tts_enabled ? '已啟用' : '已停用'} • {settings.tts_voice === 'en-GB' ? '英式' : '美式'}
                   </p>
                 </div>
               </div>
@@ -171,7 +171,7 @@ const Settings = () => {
 
         {/* Notifications Section */}
         <div className="space-y-3">
-          <h2 className="text-sm font-semibold text-muted-foreground">Notifications</h2>
+          <h2 className="text-sm font-semibold text-muted-foreground">通知</h2>
           
           <Card className="p-4">
             <button 
@@ -183,9 +183,9 @@ const Settings = () => {
                   <Bell className="h-5 w-5" />
                 </div>
                 <div className="text-left">
-                  <p className="font-medium">Study Reminders</p>
+                  <p className="font-medium">學習提醒</p>
                   <p className="text-sm text-muted-foreground">
-                    {settings.reminder_enabled ? `Enabled at ${settings.reminder_time}` : 'Not enabled'}
+                    {settings.reminder_enabled ? `已於 ${settings.reminder_time} 啟用` : '尚未啟用'}
                   </p>
                 </div>
               </div>
@@ -208,9 +208,9 @@ const Settings = () => {
                   <Key className="h-5 w-5" />
                 </div>
                 <div className="text-left">
-                  <p className="font-medium">Gemini API Key</p>
+                  <p className="font-medium">Gemini API 金鑰</p>
                   <p className="text-sm text-muted-foreground">
-                    {settings.gemini_api_key ? "Configured" : "Not configured"}
+                    {settings.gemini_api_key ? "已設定" : "未設定"}
                   </p>
                 </div>
               </div>
@@ -221,7 +221,7 @@ const Settings = () => {
 
         {/* Data Section */}
         <div className="space-y-3">
-          <h2 className="text-sm font-semibold text-muted-foreground">Data</h2>
+          <h2 className="text-sm font-semibold text-muted-foreground">資料</h2>
           
           <Card className="p-4">
             <button
@@ -233,8 +233,8 @@ const Settings = () => {
                   <Upload className="h-5 w-5" />
                 </div>
                 <div className="text-left">
-                  <p className="font-medium">Import Wordbooks</p>
-                  <p className="text-sm text-muted-foreground">Import from CSV file</p>
+                  <p className="font-medium">匯入單詞書</p>
+                  <p className="text-sm text-muted-foreground">從 CSV 檔案匯入</p>
                 </div>
               </div>
               <ChevronRight className="h-5 w-5 text-muted-foreground" />
@@ -248,8 +248,8 @@ const Settings = () => {
                   <Download className="h-5 w-5" />
                 </div>
                 <div className="text-left">
-                  <p className="font-medium">Export Data</p>
-                  <p className="text-sm text-muted-foreground">Backup your progress</p>
+                  <p className="font-medium">匯出資料</p>
+                  <p className="text-sm text-muted-foreground">備份你的學習進度</p>
                 </div>
               </div>
               <ChevronRight className="h-5 w-5 text-muted-foreground" />
@@ -259,7 +259,7 @@ const Settings = () => {
 
         {/* About Section */}
         <div className="space-y-3">
-          <h2 className="text-sm font-semibold text-muted-foreground">About</h2>
+          <h2 className="text-sm font-semibold text-muted-foreground">關於</h2>
           
           <Card className="p-4">
             <button className="w-full flex items-center justify-between">
@@ -281,7 +281,7 @@ const Settings = () => {
         <div className="text-center space-y-2 py-6">
           <h3 className="font-semibold">Vocabulary Flow</h3>
           <p className="text-sm text-muted-foreground px-4">
-            Learn vocabulary efficiently with spaced repetition and AI-powered content generation.
+            透過間隔重複和 AI 生成內容，高效學習單字。
           </p>
         </div>
       </div>

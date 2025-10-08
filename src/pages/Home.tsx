@@ -92,9 +92,9 @@ const Home = () => {
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return "Good morning!";
-    if (hour < 18) return "Good afternoon!";
-    return "Good evening!";
+    if (hour < 12) return "早安！";
+    if (hour < 18) return "午安！";
+    return "晚安！";
   };
 
   const progressPercentage = dailyGoal > 0 ? Math.min((todayCompleted / dailyGoal) * 100, 100) : 0;
@@ -126,7 +126,7 @@ const Home = () => {
         <div className="space-y-2">
           <h1 className="text-3xl font-bold">{getGreeting()} 👋</h1>
           <p className="text-muted-foreground">
-            Today's progress: {todayCompleted}/{dailyGoal} words
+            今日進度：{todayCompleted}/{dailyGoal} 個單字
           </p>
           <div className="h-2 bg-muted rounded-full overflow-hidden">
             <div
@@ -138,7 +138,7 @@ const Home = () => {
 
         {/* Start Learning */}
         <div className="space-y-4">
-          <h2 className="text-2xl font-bold">Start Learning</h2>
+          <h2 className="text-2xl font-bold">開始學習</h2>
           
           <Card
             className="p-6 cursor-pointer hover:bg-muted/50 transition-colors"
@@ -150,9 +150,9 @@ const Home = () => {
                   <Clock className="h-8 w-8" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold">Due Review</h3>
+                  <h3 className="text-xl font-semibold">待複習</h3>
                   <p className="text-muted-foreground">
-                    {String(dueCount).padStart(6, '0')} cards
+                    {String(dueCount).padStart(6, '0')} 張卡片
                   </p>
                 </div>
               </div>
@@ -170,8 +170,8 @@ const Home = () => {
                   <TrendingUp className="h-8 w-8 text-destructive" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold">Common Errors</h3>
-                  <p className="text-muted-foreground">Practice mistakes</p>
+                  <h3 className="text-xl font-semibold">常見錯誤</h3>
+                  <p className="text-muted-foreground">練習容易錯的單字</p>
                 </div>
               </div>
               <Play className="h-6 w-6 text-muted-foreground" />
@@ -188,8 +188,8 @@ const Home = () => {
                   <Zap className="h-8 w-8 text-teal" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold">New Words</h3>
-                  <p className="text-muted-foreground">Learn something new</p>
+                  <h3 className="text-xl font-semibold">新單字</h3>
+                  <p className="text-muted-foreground">學習新的單字</p>
                 </div>
               </div>
               <Play className="h-6 w-6 text-muted-foreground" />
@@ -199,7 +199,7 @@ const Home = () => {
 
         {/* Your Progress */}
         <div className="space-y-4">
-          <h2 className="text-2xl font-bold">Your Progress</h2>
+          <h2 className="text-2xl font-bold">你的進度</h2>
           
           <Card className="p-6">
             <div className="grid grid-cols-3 gap-4 text-center">
@@ -208,7 +208,7 @@ const Home = () => {
                   <Flame className="h-5 w-5 text-destructive mr-1" />
                 </div>
                   <p className="text-4xl font-bold">{streakDays}</p>
-                  <p className="text-sm text-muted-foreground">Day Streak</p>
+                  <p className="text-sm text-muted-foreground">連續天數</p>
                 </div>
                 
                 <div className="space-y-2">
@@ -216,7 +216,7 @@ const Home = () => {
                     <BookText className="h-5 w-5 text-primary mr-1" />
                   </div>
                   <p className="text-4xl font-bold">{totalWords}</p>
-                  <p className="text-sm text-muted-foreground">Total Words</p>
+                  <p className="text-sm text-muted-foreground">總單字數</p>
                 </div>
                 
                 <div className="space-y-2">
@@ -224,7 +224,7 @@ const Home = () => {
                     <Target className="h-5 w-5 text-accent mr-1" />
                   </div>
                   <p className="text-4xl font-bold">{dueCount}</p>
-                  <p className="text-sm text-muted-foreground">Due Today</p>
+                  <p className="text-sm text-muted-foreground">今日待複習</p>
                 </div>
             </div>
           </Card>
