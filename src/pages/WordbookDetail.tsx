@@ -883,28 +883,46 @@ const WordbookDetail = () => {
                   >
                     {isSelectionMode && (
                       <div 
-                        className="absolute top-4 left-4 z-10 cursor-pointer"
+                        className="absolute top-4 left-4 z-10"
                         onTouchStart={(e) => {
                           e.stopPropagation();
+                          if (longPressTimer.current) {
+                            clearTimeout(longPressTimer.current);
+                            longPressTimer.current = null;
+                          }
                         }}
                         onTouchEnd={(e) => {
                           e.stopPropagation();
+                          e.preventDefault();
+                          if (longPressTimer.current) {
+                            clearTimeout(longPressTimer.current);
+                            longPressTimer.current = null;
+                          }
                           toggleCardSelection(card.id, e);
                         }}
                         onMouseDown={(e) => {
                           e.stopPropagation();
+                          if (longPressTimer.current) {
+                            clearTimeout(longPressTimer.current);
+                            longPressTimer.current = null;
+                          }
                         }}
                         onMouseUp={(e) => {
                           e.stopPropagation();
+                          if (longPressTimer.current) {
+                            clearTimeout(longPressTimer.current);
+                            longPressTimer.current = null;
+                          }
                         }}
                         onClick={(e) => {
                           e.stopPropagation();
+                          e.preventDefault();
                           toggleCardSelection(card.id, e);
                         }}
                       >
                         <Checkbox
                           checked={isSelected}
-                          className="h-5 w-5"
+                          className="h-5 w-5 pointer-events-none"
                         />
                       </div>
                     )}
