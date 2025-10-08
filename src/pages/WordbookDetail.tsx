@@ -393,20 +393,24 @@ const WordbookDetail = () => {
   const startAutoScroll = (clientY: number) => {
     const windowHeight = window.innerHeight;
     
-    if (autoScrollInterval.current) {
-      clearInterval(autoScrollInterval.current);
-    }
-    
+    // Only scroll if near edges
     if (clientY < SCROLL_EDGE_THRESHOLD) {
-      // Scroll up
-      autoScrollInterval.current = setInterval(() => {
-        window.scrollBy(0, -SCROLL_SPEED);
-      }, 16); // ~60fps
+      // Near top edge - scroll up
+      if (!autoScrollInterval.current) {
+        autoScrollInterval.current = setInterval(() => {
+          window.scrollBy(0, -SCROLL_SPEED);
+        }, 16); // ~60fps
+      }
     } else if (clientY > windowHeight - SCROLL_EDGE_THRESHOLD) {
-      // Scroll down
-      autoScrollInterval.current = setInterval(() => {
-        window.scrollBy(0, SCROLL_SPEED);
-      }, 16);
+      // Near bottom edge - scroll down
+      if (!autoScrollInterval.current) {
+        autoScrollInterval.current = setInterval(() => {
+          window.scrollBy(0, SCROLL_SPEED);
+        }, 16);
+      }
+    } else {
+      // Not near edges - stop scrolling
+      stopAutoScroll();
     }
   };
 
@@ -419,18 +423,16 @@ const WordbookDetail = () => {
 
   const handleCardLongPress = (cardId: string) => {
     if (!isSelectionMode) {
-      // Enter selection mode and select the card
-      setIsSelectionMode(true);
-      setSelectedCardIds(new Set([cardId]));
-      
-      // Enable dragging immediately
-      setIsDragging(true);
-      
-      // Store initial selection state - the first card is selected
+      // Enter selection mode
       const stateMap = new Map<string, boolean>();
       cards.forEach(card => {
         stateMap.set(card.id, card.id === cardId);
       });
+      
+      // Update all states together to ensure consistency
+      setIsSelectionMode(true);
+      setSelectedCardIds(new Set([cardId]));
+      setIsDragging(true);
       setInitialSelectionState(stateMap);
     } else {
       // In selection mode, long press toggles and starts dragging
@@ -441,8 +443,6 @@ const WordbookDetail = () => {
       } else {
         newSet.delete(cardId);
       }
-      setSelectedCardIds(newSet);
-      setIsDragging(true);
       
       // Store initial selection states with the toggled state
       const stateMap = new Map<string, boolean>();
@@ -453,6 +453,9 @@ const WordbookDetail = () => {
           stateMap.set(c.id, selectedCardIds.has(c.id));
         }
       });
+      
+      setSelectedCardIds(newSet);
+      setIsDragging(true);
       setInitialSelectionState(stateMap);
     }
   };
