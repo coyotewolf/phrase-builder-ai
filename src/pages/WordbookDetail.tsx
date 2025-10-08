@@ -884,11 +884,26 @@ const WordbookDetail = () => {
                     {isSelectionMode && (
                       <div 
                         className="absolute top-4 left-4 z-10 cursor-pointer"
-                        onClick={(e) => toggleCardSelection(card.id, e)}
+                        onTouchStart={(e) => {
+                          e.stopPropagation();
+                        }}
+                        onTouchEnd={(e) => {
+                          e.stopPropagation();
+                          toggleCardSelection(card.id, e);
+                        }}
+                        onMouseDown={(e) => {
+                          e.stopPropagation();
+                        }}
+                        onMouseUp={(e) => {
+                          e.stopPropagation();
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleCardSelection(card.id, e);
+                        }}
                       >
                         <Checkbox
                           checked={isSelected}
-                          onCheckedChange={() => toggleCardSelection(card.id)}
                           className="h-5 w-5"
                         />
                       </div>
