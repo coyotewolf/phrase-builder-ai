@@ -710,41 +710,29 @@ const WordbookDetail = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 pb-20 overflow-x-hidden">
-      <div className="p-4 sm:p-6 space-y-6">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-        <div className="flex items-center gap-4 min-w-0 flex-1">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-2xl sm:text-3xl font-bold truncate">{wordbook.name}</h1>
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={() => setIsEditWordbookDialogOpen(true)}
-                >
-                  <Settings className="h-4 w-4" />
-                </Button>
-              </div>
-              {wordbook.description && (
-                <p className="text-sm text-muted-foreground line-clamp-2">
-                  {wordbook.description}
-                </p>
-              )}
-              {wordbook.level && (
-                <span className="inline-block mt-1 px-2 py-0.5 bg-primary/10 text-primary rounded text-xs">
-                  {wordbook.level}
-                </span>
-              )}
-            </div>
+      {/* Top Toolbar */}
+      <div className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b">
+        <div className="flex items-center justify-between p-3 sm:p-4">
+          {/* Left Section */}
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => setIsEditWordbookDialogOpen(true)}
+            >
+              <Settings className="h-5 w-5" />
+            </Button>
           </div>
-          <div className="flex gap-2 flex-wrap">
+
+          {/* Right Section */}
+          <div className="flex items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <ArrowUpDown className="h-4 w-4" />
-                  排序
+                <Button variant="ghost" size="icon">
+                  <ArrowUpDown className="h-5 w-5" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -759,14 +747,15 @@ const WordbookDetail = () => {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
             <Button
-              variant="outline"
-              size="sm"
+              variant="ghost"
+              size="icon"
               onClick={() => setIsReviewModeDialogOpen(true)}
             >
-              <Play className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">開始複習</span>
+              <Play className="h-5 w-5" />
             </Button>
+
             <input
               type="file"
               accept=".csv"
@@ -775,18 +764,43 @@ const WordbookDetail = () => {
               id="csv-upload"
             />
             <Button
-              variant="outline"
-              size="sm"
-              className="flex-1 sm:flex-none"
+              variant="ghost"
+              size="icon"
               onClick={() => document.getElementById("csv-upload")?.click()}
             >
-              <Upload className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">匯入 CSV</span>
+              <Upload className="h-5 w-5" />
             </Button>
-            <Button size="sm" className="flex-1 sm:flex-none" onClick={() => setIsAddDialogOpen(true)}>
-              <Plus className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">新增單字卡</span>
+
+            <Button 
+              size="icon" 
+              className="rounded-full"
+              onClick={() => setIsAddDialogOpen(true)}
+            >
+              <Plus className="h-5 w-5" />
             </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Content Area */}
+      <div className="p-4 sm:p-6 space-y-6">
+        {/* Wordbook Info */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-2xl sm:text-3xl font-bold">{wordbook.name}</h1>
+            {wordbook.level && (
+              <span className="px-2 py-0.5 bg-primary/10 text-primary rounded text-xs">
+                {wordbook.level}
+              </span>
+            )}
+          </div>
+          {wordbook.description && (
+            <p className="text-sm text-muted-foreground">
+              {wordbook.description}
+            </p>
+          )}
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <span>{cards.length} 張卡片</span>
           </div>
         </div>
 
