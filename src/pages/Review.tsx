@@ -34,13 +34,16 @@ const Review = () => {
   const loadCards = async () => {
     try {
       setLoading(true);
+      console.log("Loading cards for mode:", mode);
       const allWordbooks = await db.getAllWordbooks();
+      console.log("Found wordbooks:", allWordbooks.length);
       let allCards: VocabCard[] = [];
       
       for (const wordbook of allWordbooks) {
         const wordbookCards = await db.getCardsByWordbook(wordbook.id);
         allCards = [...allCards, ...wordbookCards];
       }
+      console.log("Total cards:", allCards.length);
 
       let filteredCards = allCards;
       
@@ -90,6 +93,7 @@ const Review = () => {
           filteredCards = allCards;
       }
 
+      console.log("Filtered cards:", filteredCards.length);
       setCards(filteredCards);
       setLoading(false);
     } catch (error) {
