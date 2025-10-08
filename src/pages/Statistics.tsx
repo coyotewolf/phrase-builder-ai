@@ -464,10 +464,10 @@ const Statistics = () => {
               </div>
             </div>
           </div>
-          <div className="flex items-end justify-between gap-3 h-48">
+          <div className="flex items-end justify-between gap-3 h-36">
             {weeklyProgress.map((data, index) => (
               <div key={index} className="flex-1 flex flex-col items-center gap-2">
-                <div className="w-full relative flex gap-1 items-end" style={{ height: "160px" }}>
+                <div className="w-full relative flex gap-1 items-end" style={{ height: "100px" }}>
                   <div
                     className="flex-1 bg-teal rounded-t transition-all"
                     style={{ 
@@ -526,7 +526,7 @@ const Statistics = () => {
         <Card 
           id="error-cards"
           className="p-6 space-y-4 cursor-pointer hover:bg-muted/50 transition-colors"
-          onClick={() => setIsErrorFilterDialogOpen(true)}
+          onClick={() => navigate('/wordbooks')}
         >
           <h2 className="text-lg font-semibold">需要複習的單字</h2>
           {isLoading ? (

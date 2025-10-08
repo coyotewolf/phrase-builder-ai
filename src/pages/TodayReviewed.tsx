@@ -118,7 +118,7 @@ const TodayReviewed = () => {
           <Button variant="ghost" size="icon" onClick={() => navigate("/statistics")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-xl font-bold">今日複習</h1>
+          <h1 className="text-xl font-bold">今日學習</h1>
           <div className="w-10" />
         </div>
       </div>
@@ -182,43 +182,30 @@ const TodayReviewed = () => {
               return (
                 <Card 
                   key={card.id} 
-                  className="p-4 hover:bg-muted/50 transition-colors cursor-pointer"
+                  className="p-3 hover:bg-muted/50 transition-colors cursor-pointer"
                   onClick={() => navigate(`/wordbooks/${card.wordbook_id}`)}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-lg font-semibold">{card.headword}</h3>
-                        <Badge variant="default" className="text-xs">新</Badge>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="text-base font-semibold truncate">{card.headword}</h3>
+                        <Badge variant="default" className="text-xs flex-shrink-0">新</Badge>
                       </div>
-                      {card.meanings && card.meanings.length > 0 && (
-                        <p className="text-sm text-muted-foreground line-clamp-1">
-                          {card.meanings[0].meaning_zh || card.meanings[0].meaning_en}
-                        </p>
-                      )}
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Clock className="h-3 w-3" />
                         <span>{timeString}</span>
                       </div>
                     </div>
                     
-                    <div className="flex flex-col items-end gap-2">
-                      <Badge 
-                        variant={errorRate < 30 ? "default" : errorRate < 60 ? "secondary" : "destructive"}
-                        className="text-xs"
-                      >
-                        {errorRate.toFixed(0)}% 錯誤率
-                      </Badge>
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className="flex items-center gap-1 text-success">
-                          <CheckCircle className="h-3 w-3" />
-                          {correctCount}
-                        </span>
-                        <span className="flex items-center gap-1 text-destructive">
-                          <XCircle className="h-3 w-3" />
-                          {wrongCount}
-                        </span>
-                      </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="flex items-center gap-1 text-xs text-success">
+                        <CheckCircle className="h-3 w-3" />
+                        {correctCount}
+                      </span>
+                      <span className="flex items-center gap-1 text-xs text-destructive">
+                        <XCircle className="h-3 w-3" />
+                        {wrongCount}
+                      </span>
                     </div>
                   </div>
                 </Card>
@@ -247,40 +234,27 @@ const TodayReviewed = () => {
               return (
                 <Card 
                   key={card.id} 
-                  className="p-4 hover:bg-muted/50 transition-colors cursor-pointer"
+                  className="p-3 hover:bg-muted/50 transition-colors cursor-pointer"
                   onClick={() => navigate(`/wordbooks/${card.wordbook_id}`)}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 space-y-1">
-                      <h3 className="text-lg font-semibold">{card.headword}</h3>
-                      {card.meanings && card.meanings.length > 0 && (
-                        <p className="text-sm text-muted-foreground line-clamp-1">
-                          {card.meanings[0].meaning_zh || card.meanings[0].meaning_en}
-                        </p>
-                      )}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base font-semibold truncate mb-1">{card.headword}</h3>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Clock className="h-3 w-3" />
                         <span>{timeString}</span>
                       </div>
                     </div>
                     
-                    <div className="flex flex-col items-end gap-2">
-                      <Badge 
-                        variant={errorRate < 30 ? "default" : errorRate < 60 ? "secondary" : "destructive"}
-                        className="text-xs"
-                      >
-                        {errorRate.toFixed(0)}% 錯誤率
-                      </Badge>
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className="flex items-center gap-1 text-success">
-                          <CheckCircle className="h-3 w-3" />
-                          {correctCount}
-                        </span>
-                        <span className="flex items-center gap-1 text-destructive">
-                          <XCircle className="h-3 w-3" />
-                          {wrongCount}
-                        </span>
-                      </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="flex items-center gap-1 text-xs text-success">
+                        <CheckCircle className="h-3 w-3" />
+                        {correctCount}
+                      </span>
+                      <span className="flex items-center gap-1 text-xs text-destructive">
+                        <XCircle className="h-3 w-3" />
+                        {wrongCount}
+                      </span>
                     </div>
                   </div>
                 </Card>

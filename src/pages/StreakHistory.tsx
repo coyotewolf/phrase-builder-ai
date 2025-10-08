@@ -227,7 +227,7 @@ const StreakHistory = () => {
 
           {/* Weekday labels */}
           <div className="flex gap-2">
-            <div className="w-8" />
+            <div className="w-12" />
             {["日", "一", "二", "三", "四", "五", "六"].map((day, idx) => (
               <div key={idx} className="flex-1 text-center text-xs text-muted-foreground">
                 {day}
@@ -237,24 +237,29 @@ const StreakHistory = () => {
 
           {/* Calendar grid */}
           <div className="space-y-2">
-            {weeklyData.map((week, weekIdx) => (
-              <div key={weekIdx} className="flex gap-2">
-                <div className="w-8 text-xs text-muted-foreground flex items-center">
-                  {weekIdx % 2 === 0 ? `W${weekIdx / 2 + 1}` : ""}
-                </div>
-                {week.map((day, dayIdx) => (
-                  <div
-                    key={dayIdx}
-                    className={`flex-1 aspect-square rounded ${getDayColor(day)} transition-all hover:scale-110 cursor-pointer relative group`}
-                    title={`${day.date.toLocaleDateString('zh-TW')} - ${day.reviewCount} 個單字`}
-                  >
-                    {day.isToday && (
-                      <div className="absolute inset-0 rounded border-2 border-yellow" />
-                    )}
+            {weeklyData.map((week, weekIdx) => {
+              const firstDayOfWeek = week[0].date;
+              const monthDay = `${firstDayOfWeek.getMonth() + 1}/${firstDayOfWeek.getDate()}`;
+              
+              return (
+                <div key={weekIdx} className="flex gap-2">
+                  <div className="w-12 text-xs text-muted-foreground flex items-center justify-end pr-1">
+                    {weekIdx % 2 === 0 ? monthDay : ""}
                   </div>
-                ))}
-              </div>
-            ))}
+                  {week.map((day, dayIdx) => (
+                    <div
+                      key={dayIdx}
+                      className={`flex-1 aspect-square rounded ${getDayColor(day)} transition-all hover:scale-110 cursor-pointer relative group`}
+                      title={`${day.date.toLocaleDateString('zh-TW')} - ${day.reviewCount} 個單字`}
+                    >
+                      {day.isToday && (
+                        <div className="absolute inset-0 rounded border-2 border-yellow" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
           </div>
 
           {/* Legend */}
