@@ -172,34 +172,53 @@ const Home = () => {
       </div>
 
       <div className="px-4 sm:px-6 space-y-6">
-        {/* Greeting */}
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold">{getGreeting()} 👋</h1>
-          <p className="text-muted-foreground">
-            今日進度：{todayCompleted}/{dailyGoal} 個單字
-          </p>
-          <div className="h-2 bg-muted rounded-full overflow-hidden">
-            <div
-              className="h-full bg-foreground transition-all duration-500"
-              style={{ width: `${progressPercentage}%` }}
-            />
+        {/* Greeting with Target Wordbook */}
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 space-y-2">
+            <h1 className="text-3xl font-bold">{getGreeting()} 👋</h1>
+            <p className="text-muted-foreground">
+              今日進度：{todayCompleted}/{dailyGoal} 個單字
+            </p>
+            <div className="h-2 bg-muted rounded-full overflow-hidden">
+              <div
+                className="h-full bg-foreground transition-all duration-500"
+                style={{ width: `${progressPercentage}%` }}
+              />
+            </div>
           </div>
+
+          {/* Compact Wordbook Selector */}
+          <Card className="p-3 w-40 flex-shrink-0">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Target className="h-4 w-4 text-primary" />
+                <h3 className="text-xs font-semibold">目標</h3>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full text-xs h-8"
+                onClick={() => setShowWordbookSelector(!showWordbookSelector)}
+              >
+                {selectedWordbooks.length} 本書
+              </Button>
+            </div>
+          </Card>
         </div>
 
-        {/* Wordbook Selector */}
-        <Card className="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-semibold">目標單詞書</h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowWordbookSelector(!showWordbookSelector)}
-            >
-              {showWordbookSelector ? "收起" : "選擇"}
-            </Button>
-          </div>
-          
-          {showWordbookSelector ? (
+        {/* Wordbook Selection Dialog */}
+        {showWordbookSelector && (
+          <Card className="p-4 border-2 border-primary/20">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold">選擇目標單詞書</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowWordbookSelector(false)}
+              >
+                完成
+              </Button>
+            </div>
             <ScrollArea className="h-48">
               <div className="space-y-2">
                 {allWordbooks.map((wordbook) => (
@@ -219,12 +238,8 @@ const Home = () => {
                 ))}
               </div>
             </ScrollArea>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              已選擇 {selectedWordbooks.length} 本單詞書
-            </p>
-          )}
-        </Card>
+          </Card>
+        )}
 
         {/* Start Learning */}
         <div className="space-y-4">
