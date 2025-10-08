@@ -65,8 +65,10 @@ const WordbookDetail = () => {
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const autoScrollInterval = useRef<NodeJS.Timeout | null>(null);
   const longPressedCardId = useRef<string | null>(null);
+  const touchStartPos = useRef<{ x: number; y: number } | null>(null);
   const LONG_PRESS_DURATION = 500; // 500ms for long press
   const SCROLL_EDGE_THRESHOLD = 80; // pixels from edge to trigger scroll
+  const MOVE_THRESHOLD = 10; // pixels of movement to cancel long press
   const SCROLL_SPEED = 10; // pixels per scroll tick
 
   useEffect(() => {
@@ -461,6 +463,19 @@ const WordbookDetail = () => {
   };
 
   const handleCardTouchStart = (cardId: string, e: React.TouchEvent | React.MouseEvent) => {
+    // Record touch start position
+    if ('touches' in e) {
+      touchStartPos.current = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY
+      };
+    } else {
+      touchStartPos.current = {
+        x: e.clientX,
+        y: e.clientY
+      };
+    }
+    
     // Always start long press timer
     longPressTimer.current = setTimeout(() => {
       handleCardLongPress(cardId);
@@ -472,16 +487,26 @@ const WordbookDetail = () => {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
     }
+    touchStartPos.current = null;
     setIsDragging(false);
     stopAutoScroll();
     setInitialSelectionState(new Map());
     longPressedCardId.current = null;
   };
 
-  const handleCardTouchMove = () => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
+  const handleCardTouchMove = (e: React.TouchEvent) => {
+    // Only clear long press timer if moved beyond threshold
+    if (longPressTimer.current && touchStartPos.current) {
+      const touch = e.touches[0];
+      const deltaX = Math.abs(touch.clientX - touchStartPos.current.x);
+      const deltaY = Math.abs(touch.clientY - touchStartPos.current.y);
+      
+      // If moved beyond threshold, user wants to scroll, clear timer
+      if (deltaX > MOVE_THRESHOLD || deltaY > MOVE_THRESHOLD) {
+        clearTimeout(longPressTimer.current);
+        longPressTimer.current = null;
+        touchStartPos.current = null;
+      }
     }
   };
 
@@ -820,7 +845,7 @@ const WordbookDetail = () => {
                       handleCardTouchEnd();
                     }}
                     onTouchMove={(e) => {
-                      handleCardTouchMove();
+                      handleCardTouchMove(e);
                       
                       // Only prevent default if in selection mode or long press active
                       if (longPressTimer.current || (isDragging && isSelectionMode)) {
