@@ -25,7 +25,7 @@ const StreakHistory = () => {
 
   useEffect(() => {
     loadStreakHistory();
-  }, []);
+  }, []); // Refresh on mount to include today's data
 
   const loadStreakHistory = async () => {
     try {

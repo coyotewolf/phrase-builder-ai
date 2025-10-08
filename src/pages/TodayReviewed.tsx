@@ -14,11 +14,14 @@ interface ReviewedCardData {
   wrongCount: number;
   lastReviewedAt: string;
   errorRate: number;
+  isNew: boolean;
 }
 
 const TodayReviewed = () => {
   const navigate = useNavigate();
   const [reviewedCards, setReviewedCards] = useState<ReviewedCardData[]>([]);
+  const [newCards, setNewCards] = useState<ReviewedCardData[]>([]);
+  const [reviewCards, setReviewCards] = useState<ReviewedCardData[]>([]);
   const [totalReviewed, setTotalReviewed] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
   const [wrongCount, setWrongCount] = useState(0);
@@ -56,13 +59,15 @@ const TodayReviewed = () => {
             
             if (reviewDate.getTime() === today.getTime()) {
               const errorRate = calculateErrorRate(stats.wrong_count, stats.shown_count);
+              const isNew = stats.shown_count === 1;
               
               reviewedCardsData.push({
                 card,
                 correctCount: stats.right_count,
                 wrongCount: stats.wrong_count,
                 lastReviewedAt: stats.last_reviewed_at,
-                errorRate
+                errorRate,
+                isNew
               });
 
               totalCorrect += stats.right_count;
@@ -77,7 +82,13 @@ const TodayReviewed = () => {
         new Date(b.lastReviewedAt).getTime() - new Date(a.lastReviewedAt).getTime()
       );
 
+      // Separate new and review cards
+      const newCardsData = reviewedCardsData.filter(c => c.isNew);
+      const reviewCardsData = reviewedCardsData.filter(c => !c.isNew);
+
       setReviewedCards(reviewedCardsData);
+      setNewCards(newCardsData);
+      setReviewCards(reviewCardsData);
       setTotalReviewed(reviewedCardsData.length);
       setCorrectCount(totalCorrect);
       setWrongCount(totalWrong);
@@ -151,16 +162,82 @@ const TodayReviewed = () => {
           </div>
         </Card>
 
-        {/* Reviewed Cards List */}
-        <div className="space-y-3">
-          <h2 className="text-lg font-semibold">複習記錄</h2>
-          
-          {reviewedCards.length === 0 ? (
-            <Card className="p-8 text-center">
-              <p className="text-muted-foreground">今天還沒有複習記錄</p>
-            </Card>
-          ) : (
-            reviewedCards.map(({ card, correctCount, wrongCount, lastReviewedAt, errorRate }) => {
+        {/* New Cards Section */}
+        {newCards.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">新學單字</h2>
+              <Badge variant="secondary" className="text-sm">
+                {newCards.length} 個
+              </Badge>
+            </div>
+            
+            {newCards.map(({ card, correctCount, wrongCount, lastReviewedAt, errorRate }) => {
+              const reviewTime = new Date(lastReviewedAt);
+              const timeString = reviewTime.toLocaleTimeString('zh-TW', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+              });
+              
+              return (
+                <Card 
+                  key={card.id} 
+                  className="p-4 hover:bg-muted/50 transition-colors cursor-pointer"
+                  onClick={() => navigate(`/wordbooks/${card.wordbook_id}`)}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-lg font-semibold">{card.headword}</h3>
+                        <Badge variant="default" className="text-xs">新</Badge>
+                      </div>
+                      {card.meanings && card.meanings.length > 0 && (
+                        <p className="text-sm text-muted-foreground line-clamp-1">
+                          {card.meanings[0].meaning_zh || card.meanings[0].meaning_en}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Clock className="h-3 w-3" />
+                        <span>{timeString}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-col items-end gap-2">
+                      <Badge 
+                        variant={errorRate < 30 ? "default" : errorRate < 60 ? "secondary" : "destructive"}
+                        className="text-xs"
+                      >
+                        {errorRate.toFixed(0)}% 錯誤率
+                      </Badge>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="flex items-center gap-1 text-success">
+                          <CheckCircle className="h-3 w-3" />
+                          {correctCount}
+                        </span>
+                        <span className="flex items-center gap-1 text-destructive">
+                          <XCircle className="h-3 w-3" />
+                          {wrongCount}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Review Cards Section */}
+        {reviewCards.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">複習單字</h2>
+              <Badge variant="secondary" className="text-sm">
+                {reviewCards.length} 個
+              </Badge>
+            </div>
+            
+            {reviewCards.map(({ card, correctCount, wrongCount, lastReviewedAt, errorRate }) => {
               const reviewTime = new Date(lastReviewedAt);
               const timeString = reviewTime.toLocaleTimeString('zh-TW', { 
                 hour: '2-digit', 
@@ -208,9 +285,16 @@ const TodayReviewed = () => {
                   </div>
                 </Card>
               );
-            })
-          )}
-        </div>
+            })}
+          </div>
+        )}
+
+        {/* Empty State */}
+        {reviewedCards.length === 0 && (
+          <Card className="p-8 text-center">
+            <p className="text-muted-foreground">今天還沒有複習記錄</p>
+          </Card>
+        )}
 
         {/* Motivational Message */}
         {totalReviewed >= dailyGoal && (

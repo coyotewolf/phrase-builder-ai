@@ -669,7 +669,7 @@ const WordbookDetail = () => {
       <div className="p-4 sm:p-6 space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-4 min-w-0 flex-1">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/wordbooks")}>
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
             <div className="flex-1 min-w-0">
