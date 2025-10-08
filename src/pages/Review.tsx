@@ -29,8 +29,8 @@ const Review = () => {
 
   const x = useMotionValue(0);
   const y = useMotionValue(0);
-  const rotate = useTransform(x, [-200, 0, 200], [-25, 0, 25]);
-  const opacity = useTransform(x, [-200, -100, 0, 100, 200], [0, 1, 1, 1, 0]);
+  const rotate = useTransform(x, [-300, 0, 300], [-25, 0, 25]);
+  const opacity = useTransform(x, [-300, -150, 0, 150, 300], [0, 1, 1, 1, 0]);
   const wrongIndicatorOpacity = useTransform(x, [-100, 0], [1, 0]);
   const correctIndicatorOpacity = useTransform(x, [0, 100], [0, 1]);
   const detailIndicatorOpacity = useTransform(y, [-100, 0], [1, 0]);
@@ -189,7 +189,7 @@ const Review = () => {
           x.set(0);
           y.set(0);
           setIsAnimating(false);
-        }, 100);
+        }, 50);
       } else {
         toast.success("複習完成！");
         navigate("/");
@@ -216,14 +216,14 @@ const Review = () => {
     if (Math.abs(info.offset.x) > swipeThreshold) {
       const correct = info.offset.x > 0;
       setIsAnimating(true);
-      // Animate card off screen
-      const exitX = info.offset.x > 0 ? 500 : -500;
+      // Animate card off screen - increased distance
+      const exitX = info.offset.x > 0 ? 1000 : -1000;
       x.set(exitX);
       
       // Wait for animation then handle answer
       setTimeout(() => {
         handleAnswer(correct);
-      }, 200);
+      }, 300);
     } else {
       // Reset position if threshold not met
       x.set(0);
@@ -440,8 +440,8 @@ const Review = () => {
           className="rounded-full w-16 h-16"
           onClick={() => {
             setIsAnimating(true);
-            x.set(-500);
-            setTimeout(() => handleAnswer(false), 200);
+            x.set(-1000);
+            setTimeout(() => handleAnswer(false), 300);
           }}
         >
           <span className="text-2xl">✗</span>
@@ -461,8 +461,8 @@ const Review = () => {
           className="rounded-full w-16 h-16 bg-success hover:bg-success/90"
           onClick={() => {
             setIsAnimating(true);
-            x.set(500);
-            setTimeout(() => handleAnswer(true), 200);
+            x.set(1000);
+            setTimeout(() => handleAnswer(true), 300);
           }}
         >
           <span className="text-2xl">✓</span>
