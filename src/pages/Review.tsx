@@ -265,6 +265,11 @@ const Review = () => {
         last_reviewed_at: new Date().toISOString(),
       });
 
+      // Record daily review
+      const today = new Date();
+      const dateString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      await db.createOrUpdateDailyReviewRecord(dateString, card.id, correct);
+
       // Move to next card
       if (currentIndex < cards.length - 1) {
         // Reset motion values immediately before changing index

@@ -33,29 +33,21 @@ const StreakHistory = () => {
     try {
       setLoading(true);
 
-      const allWordbooks = await db.getAllWordbooks();
+      // Get all daily review records
+      const dailyRecords = await db.getAllDailyReviewRecords();
       const reviewDatesMapTemp = new Map<string, number>();
 
-      // Collect all review dates with counts
-      for (const wordbook of allWordbooks) {
-        const cards = await db.getCardsByWordbook(wordbook.id);
-        
-        for (const card of cards) {
-          const stats = await db.getCardStats(card.id);
-          
-          if (stats?.last_reviewed_at) {
-            const reviewDate = new Date(stats.last_reviewed_at);
-            reviewDate.setHours(0, 0, 0, 0);
-            const dateKey = reviewDate.toISOString();
-            
-            reviewDatesMapTemp.set(dateKey, (reviewDatesMapTemp.get(dateKey) || 0) + 1);
-          }
-        }
+      // Convert daily records to map
+      for (const record of dailyRecords) {
+        const recordDate = new Date(record.date);
+        recordDate.setHours(0, 0, 0, 0);
+        const dateKey = recordDate.toISOString();
+        reviewDatesMapTemp.set(dateKey, record.review_count);
       }
 
       setReviewDatesMap(reviewDatesMapTemp);
 
-      // Calculate current streak (only once, not dependent on currentMonth)
+      // Calculate current streak
       let currentStreak = 0;
       const checkDate = new Date();
       checkDate.setHours(0, 0, 0, 0);

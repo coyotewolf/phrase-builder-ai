@@ -81,8 +81,19 @@ export interface UserSettings {
   gemini_api_key?: string;
 }
 
+export interface DailyReviewRecord {
+  id: string;
+  date: string; // ISO date string (YYYY-MM-DD)
+  review_count: number;
+  correct_count: number;
+  wrong_count: number;
+  card_ids: string[]; // List of card IDs reviewed that day
+  created_at: string;
+  updated_at: string;
+}
+
 const DB_NAME = 'vocabulary_flow';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 class VocabularyDB {
   private db: IDBDatabase | null = null;
@@ -99,6 +110,7 @@ class VocabularyDB {
 
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
+        const oldVersion = event.oldVersion;
 
         // Wordbooks store
         if (!db.objectStoreNames.contains('wordbooks')) {
@@ -129,6 +141,12 @@ class VocabularyDB {
         // User settings store
         if (!db.objectStoreNames.contains('user_settings')) {
           db.createObjectStore('user_settings', { keyPath: 'id' });
+        }
+
+        // Daily review records store (Version 2)
+        if (oldVersion < 2 && !db.objectStoreNames.contains('daily_review_records')) {
+          const dailyStore = db.createObjectStore('daily_review_records', { keyPath: 'id' });
+          dailyStore.createIndex('date', 'date', { unique: true });
         }
       };
     });
@@ -413,13 +431,71 @@ class VocabularyDB {
     });
   }
 
+  // Daily Review Records
+  async getDailyReviewRecord(date: string): Promise<DailyReviewRecord | undefined> {
+    const store = await this.getStore('daily_review_records');
+    const index = store.index('date');
+    return new Promise((resolve, reject) => {
+      const request = index.get(date);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getAllDailyReviewRecords(): Promise<DailyReviewRecord[]> {
+    const store = await this.getStore('daily_review_records');
+    return new Promise((resolve, reject) => {
+      const request = store.getAll();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async createOrUpdateDailyReviewRecord(
+    date: string,
+    cardId: string,
+    correct: boolean
+  ): Promise<DailyReviewRecord> {
+    const existing = await this.getDailyReviewRecord(date);
+    const store = await this.getStore('daily_review_records', 'readwrite');
+    const now = new Date().toISOString();
+
+    const record: DailyReviewRecord = existing
+      ? {
+          ...existing,
+          review_count: existing.review_count + 1,
+          correct_count: existing.correct_count + (correct ? 1 : 0),
+          wrong_count: existing.wrong_count + (correct ? 0 : 1),
+          card_ids: existing.card_ids.includes(cardId)
+            ? existing.card_ids
+            : [...existing.card_ids, cardId],
+          updated_at: now,
+        }
+      : {
+          id: crypto.randomUUID(),
+          date,
+          review_count: 1,
+          correct_count: correct ? 1 : 0,
+          wrong_count: correct ? 0 : 1,
+          card_ids: [cardId],
+          created_at: now,
+          updated_at: now,
+        };
+
+    return new Promise((resolve, reject) => {
+      const request = store.put(record);
+      request.onsuccess = () => resolve(record);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
   // Export all data
   async exportAllData(): Promise<string> {
     await this.init();
     
     // Open a single transaction for all reads to prevent transaction timeout
     const transaction = this.db!.transaction(
-      ['wordbooks', 'cards', 'card_stats', 'card_srs'],
+      ['wordbooks', 'cards', 'card_stats', 'card_srs', 'daily_review_records'],
       'readonly'
     );
     
@@ -427,9 +503,10 @@ class VocabularyDB {
     const cardStore = transaction.objectStore('cards');
     const statsStore = transaction.objectStore('card_stats');
     const srsStore = transaction.objectStore('card_srs');
+    const dailyStore = transaction.objectStore('daily_review_records');
 
     // Get all data using the same transaction
-    const [wordbooks, cards, cardStats, cardSrs] = await Promise.all([
+    const [wordbooks, cards, cardStats, cardSrs, dailyRecords] = await Promise.all([
       new Promise<Wordbook[]>((resolve, reject) => {
         const request = wordbookStore.getAll();
         request.onsuccess = () => resolve(request.result);
@@ -449,15 +526,21 @@ class VocabularyDB {
         const request = srsStore.getAll();
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
+      }),
+      new Promise<DailyReviewRecord[]>((resolve, reject) => {
+        const request = dailyStore.getAll();
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
       })
     ]);
 
     const data = {
-      version: 1,
+      version: 2,
       wordbooks,
       cards,
       card_stats: cardStats,
       card_srs: cardSrs,
+      daily_review_records: dailyRecords,
       settings: await this.getUserSettings(),
       exported_at: new Date().toISOString(),
     };
@@ -470,7 +553,7 @@ class VocabularyDB {
     const data = JSON.parse(jsonData);
 
     // Clear existing data
-    const stores = ['wordbooks', 'cards', 'card_stats', 'card_srs'];
+    const stores = ['wordbooks', 'cards', 'card_stats', 'card_srs', 'daily_review_records'];
     for (const storeName of stores) {
       const store = await this.getStore(storeName, 'readwrite');
       await new Promise<void>((resolve, reject) => {
@@ -520,6 +603,18 @@ class VocabularyDB {
     if (data.card_srs) {
       const store = await this.getStore('card_srs', 'readwrite');
       for (const item of data.card_srs) {
+        await new Promise((resolve, reject) => {
+          const request = store.add(item);
+          request.onsuccess = () => resolve(item);
+          request.onerror = () => reject(request.error);
+        });
+      }
+    }
+
+    // Import daily review records
+    if (data.daily_review_records) {
+      const store = await this.getStore('daily_review_records', 'readwrite');
+      for (const item of data.daily_review_records) {
         await new Promise((resolve, reject) => {
           const request = store.add(item);
           request.onsuccess = () => resolve(item);

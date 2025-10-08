@@ -119,28 +119,15 @@ const Home = () => {
       setTotalWords(total);
       setDueCount(yesterdayCardsCount);
 
-      // Calculate streak
+      // Calculate streak using daily review records
+      const dailyRecords = await db.getAllDailyReviewRecords();
       let streak = 0;
       const checkDate = new Date();
       checkDate.setHours(0, 0, 0, 0);
       
       while (true) {
-        let hasReview = false;
-        for (const wordbook of targetWordbooks) {
-          const cards = await db.getCardsByWordbook(wordbook.id);
-          for (const card of cards) {
-            const stats = await db.getCardStats(card.id);
-            if (stats?.last_reviewed_at) {
-              const reviewDate = new Date(stats.last_reviewed_at);
-              reviewDate.setHours(0, 0, 0, 0);
-              if (reviewDate.getTime() === checkDate.getTime()) {
-                hasReview = true;
-                break;
-              }
-            }
-          }
-          if (hasReview) break;
-        }
+        const dateString = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}-${String(checkDate.getDate()).padStart(2, '0')}`;
+        const hasReview = dailyRecords.some(record => record.date === dateString);
         
         if (!hasReview) break;
         streak++;

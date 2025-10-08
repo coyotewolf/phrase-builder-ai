@@ -346,27 +346,19 @@ const Statistics = () => {
       /**
        * 4. 連續學習天數（Streak）
        * 演算法：從今天開始往前推，計算連續有複習記錄的天數
-       * 邏輯：
-       * - 從今天開始檢查
-       * - 如果當天有任何卡片的 last_reviewed_at 是該天，計數+1
-       * - 繼續檢查前一天
-       * - 如果某天沒有複習記錄，停止計數
-       * 優化：使用 Set 來儲存有複習的日期，避免重複檢查
+       * 使用 daily_review_records 來追踪歷史記錄
        */
-      const reviewDates = new Set<string>();
-      for (const { stats } of allCardsWithStats) {
-        if (stats?.last_reviewed_at) {
-          const reviewDate = new Date(stats.last_reviewed_at);
-          reviewDate.setHours(0, 0, 0, 0);
-          reviewDates.add(reviewDate.toISOString());
-        }
-      }
+      const dailyRecords = await db.getAllDailyReviewRecords();
       
       let streak = 0;
       const checkDate = new Date();
       checkDate.setHours(0, 0, 0, 0);
       
-      while (reviewDates.has(checkDate.toISOString())) {
+      while (true) {
+        const dateString = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}-${String(checkDate.getDate()).padStart(2, '0')}`;
+        const hasReview = dailyRecords.some(record => record.date === dateString);
+        
+        if (!hasReview) break;
         streak++;
         checkDate.setDate(checkDate.getDate() - 1);
       }
