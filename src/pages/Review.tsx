@@ -27,10 +27,11 @@ const Review = () => {
   const [ttsAutoPlay, setTtsAutoPlay] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
+  const [exitX, setExitX] = useState(0);
+
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const rotate = useTransform(x, [-300, 0, 300], [-25, 0, 25]);
-  const opacity = useTransform(x, [-300, -150, 0, 150, 300], [0, 1, 1, 1, 0]);
   const wrongIndicatorOpacity = useTransform(x, [-100, 0], [1, 0]);
   const correctIndicatorOpacity = useTransform(x, [0, 100], [0, 1]);
   const detailIndicatorOpacity = useTransform(y, [-100, 0], [1, 0]);
@@ -181,13 +182,16 @@ const Review = () => {
 
       // Move to next card
       if (currentIndex < cards.length - 1) {
-        setCurrentIndex(currentIndex + 1);
-        setIsFlipped(false);
-        setIsDetailOpen(false);
-        // Reset motion values and animation state for next card
+        // Reset motion values immediately before changing index
+        x.set(0);
+        y.set(0);
+        setExitX(0);
+        
+        // Small delay to ensure motion values are reset before rendering new card
         setTimeout(() => {
-          x.set(0);
-          y.set(0);
+          setCurrentIndex(currentIndex + 1);
+          setIsFlipped(false);
+          setIsDetailOpen(false);
           setIsAnimating(false);
         }, 50);
       } else {
@@ -215,10 +219,12 @@ const Review = () => {
     // Check for horizontal swipe (left/right)
     if (Math.abs(info.offset.x) > swipeThreshold) {
       const correct = info.offset.x > 0;
+      const exitDirection = info.offset.x > 0 ? 1000 : -1000;
       setIsAnimating(true);
-      // Animate card off screen - increased distance
-      const exitX = info.offset.x > 0 ? 1000 : -1000;
-      x.set(exitX);
+      setExitX(exitDirection);
+      
+      // Animate card off screen
+      x.set(exitDirection);
       
       // Wait for animation then handle answer
       setTimeout(() => {
@@ -322,17 +328,23 @@ const Review = () => {
 
           {/* Current card (on top) */}
           <motion.div
+            key={currentIndex}
             style={{
               x,
               y,
               rotate,
-              opacity,
               cursor: "grab",
               position: "absolute",
               inset: 0,
               zIndex: 1,
             }}
-            drag
+            initial={{ x: 0, opacity: 1 }}
+            animate={{ 
+              x: isAnimating ? exitX : 0,
+              opacity: isAnimating && Math.abs(exitX) > 0 ? 0 : 1 
+            }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            drag={!isAnimating}
             dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
             dragElastic={0.2}
             onDragEnd={handleDragEnd}
@@ -440,7 +452,7 @@ const Review = () => {
           className="rounded-full w-16 h-16"
           onClick={() => {
             setIsAnimating(true);
-            x.set(-1000);
+            setExitX(-1000);
             setTimeout(() => handleAnswer(false), 300);
           }}
         >
@@ -461,7 +473,7 @@ const Review = () => {
           className="rounded-full w-16 h-16 bg-success hover:bg-success/90"
           onClick={() => {
             setIsAnimating(true);
-            x.set(1000);
+            setExitX(1000);
             setTimeout(() => handleAnswer(true), 300);
           }}
         >
