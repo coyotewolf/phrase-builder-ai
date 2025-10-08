@@ -60,6 +60,7 @@ const WordbookDetail = () => {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
   const [isDragging, setIsDragging] = useState(false);
+  const [isLongPressing, setIsLongPressing] = useState(false);
   const [isFilling, setIsFilling] = useState(false);
   const [initialSelectionState, setInitialSelectionState] = useState<Map<string, boolean>>(new Map());
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
@@ -458,6 +459,7 @@ const WordbookDetail = () => {
       
       setSelectedCardIds(newSet);
       setIsDragging(true);
+      setIsLongPressing(true);
       setInitialSelectionState(stateMap);
     }
   };
@@ -489,6 +491,7 @@ const WordbookDetail = () => {
     }
     touchStartPos.current = null;
     setIsDragging(false);
+    setIsLongPressing(false);
     stopAutoScroll();
     setInitialSelectionState(new Map());
     longPressedCardId.current = null;
@@ -506,6 +509,7 @@ const WordbookDetail = () => {
         clearTimeout(longPressTimer.current);
         longPressTimer.current = null;
         touchStartPos.current = null;
+        setIsLongPressing(false);
       }
     }
   };
@@ -835,6 +839,9 @@ const WordbookDetail = () => {
                           : 'hover:ring-2 hover:ring-primary/50'
                         : 'hover:shadow-lg'
                     }`}
+                    style={{
+                      touchAction: (isSelectionMode && isLongPressing) ? 'none' : 'auto'
+                    }}
                     onTouchStart={(e) => {
                       handleCardTouchStart(card.id, e);
                     }}
