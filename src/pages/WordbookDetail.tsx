@@ -821,6 +821,7 @@ const WordbookDetail = () => {
                     onTouchMove={(e) => {
                       handleCardTouchMove();
                       if (isDragging && isSelectionMode) {
+                        e.preventDefault(); // Prevent default touch scrolling
                         const touch = e.touches[0];
                         
                         // Check if near edges and start/stop auto-scroll accordingly
