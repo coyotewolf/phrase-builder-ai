@@ -15,6 +15,7 @@ import AccuracyDetails from "./pages/AccuracyDetails";
 import AllErrorCards from "./pages/AllErrorCards";
 import Settings from "./pages/Settings";
 import Review from "./pages/Review";
+import About from "./pages/About";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +38,7 @@ const App = () => (
           <Route path="/statistics/error-cards" element={<AllErrorCards />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/review" element={<Review />} />
+          <Route path="/about" element={<About />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

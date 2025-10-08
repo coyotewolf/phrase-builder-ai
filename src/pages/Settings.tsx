@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -25,6 +26,7 @@ import { TTSSettingsDialog } from "@/components/TTSSettingsDialog";
 import { StudyRemindersDialog } from "@/components/StudyRemindersDialog";
 
 const Settings = () => {
+  const navigate = useNavigate();
   const [settings, setSettings] = useState<UserSettingsType>({
     id: 'default',
     daily_goal: 100,
@@ -371,7 +373,10 @@ const Settings = () => {
           <h2 className="text-sm font-semibold text-muted-foreground">關於</h2>
           
           <Card className="p-4">
-            <button className="w-full flex items-center justify-between">
+            <button 
+              className="w-full flex items-center justify-between"
+              onClick={() => navigate("/about")}
+            >
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-background rounded-lg">
                   <Info className="h-5 w-5" />
