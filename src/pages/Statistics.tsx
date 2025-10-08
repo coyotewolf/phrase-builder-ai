@@ -401,7 +401,10 @@ const Statistics = () => {
 
         {/* Top Stats */}
         <div className="grid grid-cols-3 gap-3">
-          <Card className="p-4 text-center space-y-2">
+          <Card 
+            className="p-4 text-center space-y-2 cursor-pointer hover:bg-muted/50 transition-colors"
+            onClick={() => navigate('/review')}
+          >
             <div className="p-3 bg-teal/20 rounded-2xl w-fit mx-auto">
               <Target className="h-6 w-6 text-teal" />
             </div>
@@ -412,7 +415,13 @@ const Statistics = () => {
             </div>
           </Card>
 
-          <Card className="p-4 text-center space-y-2">
+          <Card 
+            className="p-4 text-center space-y-2 cursor-pointer hover:bg-muted/50 transition-colors"
+            onClick={() => {
+              const progressSection = document.getElementById('progress-by-level');
+              progressSection?.scrollIntoView({ behavior: 'smooth' });
+            }}
+          >
             <div className="p-3 bg-yellow/20 rounded-2xl w-fit mx-auto">
               <Flame className="h-6 w-6 text-yellow" />
             </div>
@@ -424,7 +433,13 @@ const Statistics = () => {
             </div>
           </Card>
 
-          <Card className="p-4 text-center space-y-2">
+          <Card 
+            className="p-4 text-center space-y-2 cursor-pointer hover:bg-muted/50 transition-colors"
+            onClick={() => {
+              const errorSection = document.getElementById('error-cards');
+              errorSection?.scrollIntoView({ behavior: 'smooth' });
+            }}
+          >
             <div className="p-3 bg-success/20 rounded-2xl w-fit mx-auto">
               <TrendingUp className="h-6 w-6 text-success" />
             </div>
@@ -485,7 +500,7 @@ const Statistics = () => {
         </Card>
 
         {/* Progress by Level */}
-        <Card className="p-6 space-y-4">
+        <Card id="progress-by-level" className="p-6 space-y-4">
           <h2 className="text-lg font-semibold">各程度進度</h2>
           <div className="space-y-4">
             {progressByLevel.map((level) => (
@@ -512,7 +527,11 @@ const Statistics = () => {
         </Card>
 
         {/* Words to Review */}
-        <Card className="p-6 space-y-4">
+        <Card 
+          id="error-cards"
+          className="p-6 space-y-4 cursor-pointer hover:bg-muted/50 transition-colors"
+          onClick={() => navigate('/review?mode=error')}
+        >
           <h2 className="text-lg font-semibold">需要複習的單字</h2>
           {isLoading ? (
             <p className="text-center text-muted-foreground py-4">載入中...</p>
