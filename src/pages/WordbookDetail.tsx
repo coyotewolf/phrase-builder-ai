@@ -432,15 +432,36 @@ const WordbookDetail = () => {
         stateMap.set(card.id, card.id === cardId);
       });
       setInitialSelectionState(stateMap);
+    } else {
+      // In selection mode, long press toggles and starts dragging
+      const newSelectedState = !selectedCardIds.has(cardId);
+      const newSet = new Set(selectedCardIds);
+      if (newSelectedState) {
+        newSet.add(cardId);
+      } else {
+        newSet.delete(cardId);
+      }
+      setSelectedCardIds(newSet);
+      setIsDragging(true);
+      
+      // Store initial selection states with the toggled state
+      const stateMap = new Map<string, boolean>();
+      cards.forEach(c => {
+        if (c.id === cardId) {
+          stateMap.set(c.id, newSelectedState);
+        } else {
+          stateMap.set(c.id, selectedCardIds.has(c.id));
+        }
+      });
+      setInitialSelectionState(stateMap);
     }
   };
 
   const handleCardTouchStart = (cardId: string, e: React.TouchEvent | React.MouseEvent) => {
-    if (!isSelectionMode) {
-      longPressTimer.current = setTimeout(() => {
-        handleCardLongPress(cardId);
-      }, LONG_PRESS_DURATION);
-    }
+    // Always start long press timer
+    longPressTimer.current = setTimeout(() => {
+      handleCardLongPress(cardId);
+    }, LONG_PRESS_DURATION);
   };
 
   const handleCardTouchEnd = () => {
@@ -792,6 +813,10 @@ const WordbookDetail = () => {
                     onTouchEnd={(e) => {
                       e.stopPropagation();
                       handleCardTouchEnd();
+                      // If it was a short tap (not a drag), toggle selection in selection mode
+                      if (isSelectionMode && !isDragging) {
+                        toggleCardSelection(card.id);
+                      }
                     }}
                     onTouchMove={(e) => {
                       handleCardTouchMove();
@@ -825,30 +850,16 @@ const WordbookDetail = () => {
                     }}
                     onMouseDown={(e) => {
                       e.stopPropagation();
-                      if (isSelectionMode) {
-                        // In selection mode, clicking toggles and starts dragging
-                        const newSelectedState = !selectedCardIds.has(card.id);
-                        toggleCardSelection(card.id);
-                        setIsDragging(true);
-                        
-                        // Store initial selection states with the toggled state
-                        const stateMap = new Map<string, boolean>();
-                        cards.forEach(c => {
-                          if (c.id === card.id) {
-                            stateMap.set(c.id, newSelectedState);
-                          } else {
-                            stateMap.set(c.id, selectedCardIds.has(c.id));
-                          }
-                        });
-                        setInitialSelectionState(stateMap);
-                      } else {
-                        // Not in selection mode, start long press timer
-                        handleCardTouchStart(card.id, e);
-                      }
+                      // Always start long press timer for drag functionality
+                      handleCardTouchStart(card.id, e);
                     }}
                     onMouseUp={(e) => {
                       e.stopPropagation();
                       handleCardTouchEnd();
+                      // If it was a short click (not a drag), toggle selection in selection mode
+                      if (isSelectionMode && !isDragging) {
+                        toggleCardSelection(card.id);
+                      }
                     }}
                     onMouseMove={(e) => {
                       if (isDragging && isSelectionMode) {
