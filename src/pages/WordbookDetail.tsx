@@ -378,9 +378,10 @@ const WordbookDetail = () => {
     setSelectedCardIds(new Set([cardId]));
   };
 
-  const handleCardTouchStart = (cardId: string) => {
+  const handleCardTouchStart = (cardId: string, e?: React.TouchEvent | React.MouseEvent) => {
     if (isSelectionMode) {
       toggleCardSelection(cardId);
+      setIsDragging(true);
     } else {
       longPressTimer.current = setTimeout(() => {
         handleCardLongPress(cardId);
@@ -396,10 +397,20 @@ const WordbookDetail = () => {
     setIsDragging(false);
   };
 
-  const handleCardTouchMove = (cardId: string) => {
-    if (isSelectionMode && isDragging) {
-      toggleCardSelection(cardId);
+  const handleCardTouchMove = () => {
+    // Cancel long press if user is dragging
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
     }
+  };
+
+  const addCardToSelection = (cardId: string) => {
+    setSelectedCardIds(prev => {
+      const newSet = new Set(prev);
+      newSet.add(cardId);
+      return newSet;
+    });
   };
 
   const toggleCardSelection = (cardId: string) => {
@@ -701,25 +712,47 @@ const WordbookDetail = () => {
                           : 'hover:ring-2 hover:ring-primary/50'
                         : 'hover:shadow-lg'
                     }`}
-                    onTouchStart={() => {
+                    onTouchStart={(e) => {
+                      e.stopPropagation();
                       handleCardTouchStart(card.id);
-                      if (isSelectionMode) setIsDragging(true);
                     }}
-                    onTouchEnd={handleCardTouchEnd}
-                    onTouchMove={() => handleCardTouchMove(card.id)}
-                    onMouseDown={() => {
+                    onTouchEnd={(e) => {
+                      e.stopPropagation();
+                      handleCardTouchEnd();
+                    }}
+                    onTouchMove={(e) => {
+                      handleCardTouchMove();
+                      if (isSelectionMode && isDragging) {
+                        const touch = e.touches[0];
+                        const element = document.elementFromPoint(touch.clientX, touch.clientY);
+                        const cardElement = element?.closest('[data-card-id]');
+                        if (cardElement) {
+                          const hoveredCardId = cardElement.getAttribute('data-card-id');
+                          if (hoveredCardId && hoveredCardId !== card.id) {
+                            addCardToSelection(hoveredCardId);
+                          }
+                        }
+                      }
+                    }}
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
                       if (isSelectionMode) {
                         toggleCardSelection(card.id);
+                        setIsDragging(true);
                       } else {
                         handleCardTouchStart(card.id);
                       }
                     }}
-                    onMouseUp={handleCardTouchEnd}
+                    onMouseUp={(e) => {
+                      e.stopPropagation();
+                      handleCardTouchEnd();
+                    }}
                     onMouseEnter={() => {
                       if (isSelectionMode && isDragging) {
-                        toggleCardSelection(card.id);
+                        addCardToSelection(card.id);
                       }
                     }}
+                    data-card-id={card.id}
                   >
                     {isSelectionMode && (
                       <div className="absolute top-4 left-4 z-10">
