@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { db, Card as VocabCard } from "@/lib/db";
 import { calculateErrorRate } from "@/lib/srs";
+import { CardDetailDialog } from "@/components/CardDetailDialog";
 
 interface ReviewedCardData {
   card: VocabCard;
@@ -27,6 +28,8 @@ const TodayReviewed = () => {
   const [wrongCount, setWrongCount] = useState(0);
   const [dailyGoal, setDailyGoal] = useState(50);
   const [loading, setLoading] = useState(true);
+  const [selectedCard, setSelectedCard] = useState<VocabCard | null>(null);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
 
   useEffect(() => {
     loadTodayReviewed();
@@ -97,6 +100,11 @@ const TodayReviewed = () => {
       console.error("Failed to load today's reviewed cards:", error);
       setLoading(false);
     }
+  };
+
+  const handleCardClick = (card: VocabCard) => {
+    setSelectedCard(card);
+    setIsDetailDialogOpen(true);
   };
 
   const progressPercentage = dailyGoal > 0 ? Math.min((totalReviewed / dailyGoal) * 100, 100) : 0;
@@ -183,7 +191,7 @@ const TodayReviewed = () => {
                 <Card 
                   key={card.id} 
                   className="p-3 hover:bg-muted/50 transition-colors cursor-pointer"
-                  onClick={() => navigate(`/wordbooks/${card.wordbook_id}`)}
+                  onClick={() => handleCardClick(card)}
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex-1 min-w-0">
@@ -235,7 +243,7 @@ const TodayReviewed = () => {
                 <Card 
                   key={card.id} 
                   className="p-3 hover:bg-muted/50 transition-colors cursor-pointer"
-                  onClick={() => navigate(`/wordbooks/${card.wordbook_id}`)}
+                  onClick={() => handleCardClick(card)}
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex-1 min-w-0">
@@ -281,6 +289,12 @@ const TodayReviewed = () => {
           </Card>
         )}
       </div>
+
+      <CardDetailDialog 
+        open={isDetailDialogOpen}
+        onOpenChange={setIsDetailDialogOpen}
+        card={selectedCard}
+      />
     </div>
   );
 };
