@@ -317,22 +317,26 @@ const Review = () => {
 
               {/* Back Side - Simple Meanings */}
               <Card
-                className="absolute inset-0 flex items-center justify-center p-8 shadow-2xl cursor-pointer"
+                className="absolute inset-0 flex items-center justify-center p-4 sm:p-8 shadow-2xl cursor-pointer"
                 style={{
                   backfaceVisibility: "hidden",
                   transform: "rotateY(180deg)",
                 }}
               >
                 <div className="space-y-3 text-center">
-                  {currentCard.meanings && currentCard.meanings.map((meaning, idx) => {
-                    const posAbbr = meaning.part_of_speech?.substring(0, 1) || '';
-                    return (
-                      <p key={idx} className="text-xl sm:text-2xl font-medium">
-                        {posAbbr && <span className="text-muted-foreground">{posAbbr}. </span>}
-                        {meaning.meaning_zh || meaning.meaning_en}
-                      </p>
-                    );
-                  })}
+                  {currentCard.meanings && currentCard.meanings.length > 0 ? (
+                    currentCard.meanings.map((meaning, idx) => {
+                      const posAbbr = meaning.part_of_speech?.substring(0, 1) || '';
+                      return (
+                        <p key={idx} className="text-xl sm:text-2xl font-medium">
+                          {posAbbr && <span className="text-muted-foreground">{posAbbr}. </span>}
+                          {meaning.meaning_zh || meaning.meaning_en}
+                        </p>
+                      );
+                    })
+                  ) : (
+                    <p className="text-xl text-muted-foreground">暫無釋義</p>
+                  )}
                 </div>
               </Card>
             </motion.div>
@@ -421,11 +425,12 @@ const Review = () => {
           </SheetHeader>
 
           <div className="space-y-6 mt-6">
-            {currentCard.meanings && currentCard.meanings.map((meaning, idx) => (
-              <div key={idx} className="border-l-4 border-primary pl-4 space-y-3">
-                <h3 className="text-lg font-semibold">
-                  {meaning.part_of_speech || `釋義 ${idx + 1}`}
-                </h3>
+            {currentCard.meanings && currentCard.meanings.length > 0 ? (
+              currentCard.meanings.map((meaning, idx) => (
+                <div key={idx} className="border-l-4 border-primary pl-4 space-y-3">
+                  <h3 className="text-lg font-semibold">
+                    {meaning.part_of_speech || `釋義 ${idx + 1}`}
+                  </h3>
 
                 {meaning.meaning_zh && (
                   <div>
@@ -468,7 +473,10 @@ const Review = () => {
                   </div>
                 )}
               </div>
-            ))}
+            ))
+            ) : (
+              <p className="text-muted-foreground">此卡片暫無詳細釋義</p>
+            )}
 
             {currentCard.notes && (
               <div className="bg-muted p-4 rounded-lg">
