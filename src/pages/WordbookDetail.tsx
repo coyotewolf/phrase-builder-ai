@@ -813,10 +813,6 @@ const WordbookDetail = () => {
                     onTouchEnd={(e) => {
                       e.stopPropagation();
                       handleCardTouchEnd();
-                      // If it was a short tap (not a drag), toggle selection in selection mode
-                      if (isSelectionMode && !isDragging) {
-                        toggleCardSelection(card.id);
-                      }
                     }}
                     onTouchMove={(e) => {
                       handleCardTouchMove();
@@ -856,10 +852,6 @@ const WordbookDetail = () => {
                     onMouseUp={(e) => {
                       e.stopPropagation();
                       handleCardTouchEnd();
-                      // If it was a short click (not a drag), toggle selection in selection mode
-                      if (isSelectionMode && !isDragging) {
-                        toggleCardSelection(card.id);
-                      }
                     }}
                     onMouseMove={(e) => {
                       if (isDragging && isSelectionMode) {
