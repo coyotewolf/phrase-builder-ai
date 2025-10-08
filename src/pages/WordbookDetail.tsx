@@ -810,6 +810,9 @@ const WordbookDetail = () => {
                           : 'hover:ring-2 hover:ring-primary/50'
                         : 'hover:shadow-lg'
                     }`}
+                    style={{
+                      touchAction: isSelectionMode ? 'none' : 'auto'
+                    }}
                     onTouchStart={(e) => {
                       e.stopPropagation();
                       handleCardTouchStart(card.id, e);
@@ -819,12 +822,8 @@ const WordbookDetail = () => {
                       handleCardTouchEnd();
                     }}
                     onTouchMove={(e) => {
+                      e.stopPropagation();
                       handleCardTouchMove();
-                      
-                      // Prevent default scrolling if long press timer is active or already dragging
-                      if (longPressTimer.current || (isDragging && isSelectionMode)) {
-                        e.preventDefault();
-                      }
                       
                       if (isDragging && isSelectionMode) {
                         const touch = e.touches[0];
