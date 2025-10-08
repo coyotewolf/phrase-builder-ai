@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Plus, ArrowLeft, Trash2, Upload, Sparkles, Edit, Settings, X, Play } from "lucide-react";
+import { Plus, ArrowLeft, Trash2, Upload, Sparkles, Edit, Settings, X, Play, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { db, Card as VocabCard, Wordbook } from "@/lib/db";
 import { generateWordDetails } from "@/lib/gemini-api";
 import { parseCSV } from "@/lib/csv";
@@ -47,6 +53,8 @@ const WordbookDetail = () => {
   const [isFilling, setIsFilling] = useState(false);
   const [initialSelectionState, setInitialSelectionState] = useState<Map<string, boolean>>(new Map());
   const [isReviewModeDialogOpen, setIsReviewModeDialogOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<'alphabet' | 'created' | 'errors'>('created');
+  const [cardsWithStats, setCardsWithStats] = useState<Array<VocabCard & { errorCount: number }>>([]);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const autoScrollInterval = useRef<NodeJS.Timeout | null>(null);
   const longPressedCardId = useRef<string | null>(null);
@@ -70,7 +78,20 @@ const WordbookDetail = () => {
       
       if (book) {
         const cardList = await db.getCardsByWordbook(id);
-        setCards(cardList);
+        
+        // Load stats for each card
+        const cardsWithStatsData = await Promise.all(
+          cardList.map(async (card) => {
+            const stats = await db.getCardStats(card.id);
+            return {
+              ...card,
+              errorCount: stats?.wrong_count || 0
+            };
+          })
+        );
+        
+        setCardsWithStats(cardsWithStatsData);
+        sortCards(cardsWithStatsData, sortBy);
       }
     } catch (error) {
       console.error("Failed to load wordbook:", error);
@@ -79,6 +100,27 @@ const WordbookDetail = () => {
       setIsLoading(false);
     }
   };
+
+  const sortCards = (cardsList: Array<VocabCard & { errorCount: number }>, sortType: 'alphabet' | 'created' | 'errors') => {
+    const sorted = [...cardsList].sort((a, b) => {
+      switch (sortType) {
+        case 'alphabet':
+          return a.headword.localeCompare(b.headword, 'en');
+        case 'errors':
+          return b.errorCount - a.errorCount;
+        case 'created':
+        default:
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+    });
+    setCards(sorted);
+  };
+
+  useEffect(() => {
+    if (cardsWithStats.length > 0) {
+      sortCards(cardsWithStats, sortBy);
+    }
+  }, [sortBy]);
 
   const handleAddCard = async (cardData: {
     headword: string;
@@ -698,6 +740,33 @@ const WordbookDetail = () => {
             </div>
           </div>
           <div className="flex gap-2 flex-wrap">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <ArrowUpDown className="h-4 w-4" />
+                  排序
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setSortBy('created')}>
+                  按添加時間
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortBy('alphabet')}>
+                  按字母順序
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortBy('errors')}>
+                  按錯誤次數
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsReviewModeDialogOpen(true)}
+            >
+              <Play className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">開始複習</span>
+            </Button>
             <input
               type="file"
               accept=".csv"
