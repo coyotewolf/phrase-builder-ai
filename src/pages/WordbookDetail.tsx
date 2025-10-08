@@ -419,18 +419,23 @@ const WordbookDetail = () => {
 
   const handleCardLongPress = (cardId: string) => {
     if (!isSelectionMode) {
-      enterSelectionMode(cardId);
+      // Enter selection mode and select the card
+      setIsSelectionMode(true);
+      setSelectedCardIds(new Set([cardId]));
+      
+      // Enable dragging immediately
       setIsDragging(true);
-      // Store initial selection states when starting drag
+      
+      // Store initial selection state - the first card is selected
       const stateMap = new Map<string, boolean>();
       cards.forEach(card => {
-        stateMap.set(card.id, selectedCardIds.has(card.id));
+        stateMap.set(card.id, card.id === cardId);
       });
       setInitialSelectionState(stateMap);
     }
   };
 
-  const handleCardTouchStart = (cardId: string) => {
+  const handleCardTouchStart = (cardId: string, e: React.TouchEvent | React.MouseEvent) => {
     if (!isSelectionMode) {
       longPressTimer.current = setTimeout(() => {
         handleCardLongPress(cardId);
@@ -782,7 +787,7 @@ const WordbookDetail = () => {
                     }`}
                     onTouchStart={(e) => {
                       e.stopPropagation();
-                      handleCardTouchStart(card.id);
+                      handleCardTouchStart(card.id, e);
                     }}
                     onTouchEnd={(e) => {
                       e.stopPropagation();
@@ -790,7 +795,7 @@ const WordbookDetail = () => {
                     }}
                     onTouchMove={(e) => {
                       handleCardTouchMove();
-                      if (isSelectionMode && isDragging) {
+                      if (isDragging && isSelectionMode) {
                         const touch = e.touches[0];
                         
                         // Auto-scroll when near edges
@@ -821,16 +826,24 @@ const WordbookDetail = () => {
                     onMouseDown={(e) => {
                       e.stopPropagation();
                       if (isSelectionMode) {
+                        // In selection mode, clicking toggles and starts dragging
+                        const newSelectedState = !selectedCardIds.has(card.id);
                         toggleCardSelection(card.id);
                         setIsDragging(true);
-                        // Store initial selection states
+                        
+                        // Store initial selection states with the toggled state
                         const stateMap = new Map<string, boolean>();
                         cards.forEach(c => {
-                          stateMap.set(c.id, selectedCardIds.has(c.id));
+                          if (c.id === card.id) {
+                            stateMap.set(c.id, newSelectedState);
+                          } else {
+                            stateMap.set(c.id, selectedCardIds.has(c.id));
+                          }
                         });
                         setInitialSelectionState(stateMap);
                       } else {
-                        handleCardTouchStart(card.id);
+                        // Not in selection mode, start long press timer
+                        handleCardTouchStart(card.id, e);
                       }
                     }}
                     onMouseUp={(e) => {
@@ -838,13 +851,13 @@ const WordbookDetail = () => {
                       handleCardTouchEnd();
                     }}
                     onMouseMove={(e) => {
-                      if (isSelectionMode && isDragging) {
+                      if (isDragging && isSelectionMode) {
                         // Auto-scroll when near edges
                         startAutoScroll(e.clientY);
                       }
                     }}
                     onMouseEnter={() => {
-                      if (isSelectionMode && isDragging) {
+                      if (isDragging && isSelectionMode) {
                         const wasInitiallySelected = initialSelectionState.get(card.id) || false;
                         const isCurrentlySelected = selectedCardIds.has(card.id);
                         
