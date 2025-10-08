@@ -802,46 +802,54 @@ const WordbookDetail = () => {
         ) : (
           <>
             {isSelectionMode && (
-              <div className="sticky top-0 z-50 bg-gradient-to-b from-background via-background to-background/80 backdrop-blur-sm pb-4 mb-4">
-                <div className="flex items-center justify-between p-4 bg-card rounded-lg border border-primary/20 shadow-lg">
-                  <div className="flex items-center gap-3">
+              <div className="sticky top-0 z-50 bg-gradient-to-b from-background via-background to-background/80 backdrop-blur-sm pb-3 mb-4">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-3 sm:p-4 bg-card rounded-lg border border-primary/20 shadow-lg">
+                  <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={cancelSelectionMode}
-                      className="hover:bg-destructive/10"
+                      className="hover:bg-destructive/10 shrink-0"
                     >
-                      <X className="h-4 w-4 mr-1" />
-                      取消
+                      <X className="h-4 w-4 sm:mr-1" />
+                      <span className="hidden sm:inline">取消</span>
                     </Button>
+                    <div className="h-4 w-px bg-border shrink-0" />
                     <Checkbox
                       checked={selectedCardIds.size === cards.length && cards.length > 0}
                       onCheckedChange={handleSelectAll}
-                      className="mr-2"
+                      className="shrink-0"
                     />
-                    <span className="text-sm font-medium">
-                      已選擇 {selectedCardIds.size} / {cards.length} 張卡片
+                    <span className="text-sm font-medium truncate">
+                      <span className="hidden sm:inline">已選擇 </span>
+                      <span className="font-semibold text-primary">{selectedCardIds.size}</span>
+                      <span className="text-muted-foreground"> / {cards.length}</span>
+                      <span className="hidden sm:inline"> 張卡片</span>
+                      <span className="inline sm:hidden"> 張</span>
                     </span>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 sm:gap-2">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={handleBatchRegenerate}
                       disabled={selectedCardIds.size === 0}
-                      className="hover:bg-primary/10"
+                      className="hover:bg-primary/10 flex-1 sm:flex-none"
                     >
-                      <Sparkles className="h-4 w-4 mr-1" />
-                      AI 重新生成
+                      <Sparkles className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">AI 重新生成</span>
+                      <span className="inline sm:hidden">重新生成</span>
                     </Button>
                     <Button
                       variant="destructive"
                       size="sm"
                       onClick={handleBatchDelete}
                       disabled={selectedCardIds.size === 0}
+                      className="flex-1 sm:flex-none"
                     >
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      刪除
+                      <Trash2 className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">刪除</span>
+                      <span className="inline sm:hidden">刪除</span>
                     </Button>
                   </div>
                 </div>
