@@ -41,10 +41,11 @@ const Review = () => {
 
   useEffect(() => {
     // Auto-play pronunciation when card changes
+    const currentCard = cards[currentIndex];
     if (ttsEnabled && ttsAutoPlay && currentCard && !isFlipped) {
       playPronunciation(currentCard.headword, ttsVoice);
     }
-  }, [currentIndex, ttsEnabled, ttsAutoPlay, ttsVoice]);
+  }, [currentIndex, cards, ttsEnabled, ttsAutoPlay, ttsVoice, isFlipped]);
 
   const loadTTSSettings = async () => {
     try {
