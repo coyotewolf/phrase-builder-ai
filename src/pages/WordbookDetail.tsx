@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { ApiKeyDialog } from "@/components/ApiKeyDialog";
 import { EditCardDialog } from "@/components/EditCardDialog";
 import { EditWordbookDialog } from "@/components/EditWordbookDialog";
+import { RegenerateCardsDialog } from "@/components/RegenerateCardsDialog";
 
 const WordbookDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -31,7 +32,10 @@ const WordbookDetail = () => {
   const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isEditWordbookDialogOpen, setIsEditWordbookDialogOpen] = useState(false);
+  const [isRegenerateDialogOpen, setIsRegenerateDialogOpen] = useState(false);
   const [selectedCard, setSelectedCard] = useState<VocabCard | null>(null);
+  const [pendingLevel, setPendingLevel] = useState<string | null>(null);
+  const [isRegenerating, setIsRegenerating] = useState(false);
   const [newWord, setNewWord] = useState("");
   const [newPhonetic, setNewPhonetic] = useState("");
   const [newMeanings, setNewMeanings] = useState<Array<{
@@ -187,17 +191,12 @@ const WordbookDetail = () => {
       const levelChanged = updates.level && updates.level !== wordbook?.level;
       await db.updateWordbook(id, updates);
       toast.success("單詞書已更新");
-      loadData();
+      await loadData();
       
-      // If level changed, ask user if they want to regenerate all cards
+      // If level changed, show dialog to ask if user wants to regenerate all cards
       if (levelChanged && cards.length > 0) {
-        const shouldRegenerate = confirm(
-          `單詞書程度已變更為 ${updates.level}。是否要根據新程度重新生成此本內所有單字的 AI 內容（同義詞、反義詞、例句等）？`
-        );
-        
-        if (shouldRegenerate) {
-          await handleRegenerateAllCards(updates.level!);
-        }
+        setPendingLevel(updates.level!);
+        setIsRegenerateDialogOpen(true);
       }
     } catch (error) {
       console.error("Failed to update wordbook:", error);
@@ -205,7 +204,9 @@ const WordbookDetail = () => {
     }
   };
 
-  const handleRegenerateAllCards = async (newLevel: string) => {
+  const handleRegenerateAllCards = async () => {
+    if (!pendingLevel) return;
+    
     const settings = await db.getUserSettings();
     if (!settings.gemini_api_key) {
       toast.error("請先設定 Gemini API 密鑰");
@@ -213,17 +214,26 @@ const WordbookDetail = () => {
       return;
     }
 
+    setIsRegenerateDialogOpen(false);
+    setIsRegenerating(true);
+    
     try {
-      toast.info(`開始重新生成 ${cards.length} 張單字卡...`);
+      // Reload cards to get the latest data
+      const currentCards = await db.getCardsByWordbook(id!);
+      toast.info(`開始重新生成 ${currentCards.length} 張單字卡...`);
+      
       let successCount = 0;
       let errorCount = 0;
 
-      for (const card of cards) {
+      for (let i = 0; i < currentCards.length; i++) {
+        const card = currentCards[i];
         try {
+          toast.info(`正在處理 ${i + 1}/${currentCards.length}: ${card.headword}`);
+          
           const details = await generateWordDetails(
             { 
               words: [card.headword], 
-              level: newLevel,
+              level: pendingLevel,
               limits: { synonyms: 10, antonyms: 10, examples: 5 }
             },
             settings.gemini_api_key
@@ -245,6 +255,11 @@ const WordbookDetail = () => {
             });
             successCount++;
           }
+          
+          // Small delay to avoid rate limiting
+          if (i < currentCards.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
         } catch (error) {
           console.error(`Failed to regenerate card ${card.headword}:`, error);
           errorCount++;
@@ -252,14 +267,17 @@ const WordbookDetail = () => {
       }
 
       if (errorCount === 0) {
-        toast.success(`成功重新生成 ${successCount} 張單字卡`);
+        toast.success(`✅ 成功重新生成所有 ${successCount} 張單字卡`);
       } else {
         toast.warning(`已重新生成 ${successCount} 張單字卡，${errorCount} 張失敗`);
       }
-      loadData();
+      await loadData();
     } catch (error) {
       console.error("Failed to regenerate cards:", error);
       toast.error("批量重新生成失敗");
+    } finally {
+      setIsRegenerating(false);
+      setPendingLevel(null);
     }
   };
 
@@ -527,6 +545,28 @@ const WordbookDetail = () => {
           wordbook={wordbook}
           onSave={handleSaveWordbook}
         />
+
+        <RegenerateCardsDialog
+          open={isRegenerateDialogOpen}
+          onOpenChange={setIsRegenerateDialogOpen}
+          onConfirm={handleRegenerateAllCards}
+          level={pendingLevel || ""}
+          cardCount={cards.length}
+        />
+
+        {isRegenerating && (
+          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+            <Card className="p-6 space-y-4 max-w-md">
+              <div className="flex items-center gap-3">
+                <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full" />
+                <p className="font-semibold">正在重新生成單字卡...</p>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                請稍候，這可能需要幾分鐘時間
+              </p>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );
