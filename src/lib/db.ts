@@ -415,37 +415,52 @@ class VocabularyDB {
 
   // Export all data
   async exportAllData(): Promise<string> {
+    await this.init();
+    
+    // Open a single transaction for all reads to prevent transaction timeout
+    const transaction = this.db!.transaction(
+      ['wordbooks', 'cards', 'card_stats', 'card_srs'],
+      'readonly'
+    );
+    
+    const wordbookStore = transaction.objectStore('wordbooks');
+    const cardStore = transaction.objectStore('cards');
+    const statsStore = transaction.objectStore('card_stats');
+    const srsStore = transaction.objectStore('card_srs');
+
+    // Get all data using the same transaction
+    const [wordbooks, cards, cardStats, cardSrs] = await Promise.all([
+      new Promise<Wordbook[]>((resolve, reject) => {
+        const request = wordbookStore.getAll();
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      }),
+      new Promise<Card[]>((resolve, reject) => {
+        const request = cardStore.getAll();
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      }),
+      new Promise<CardStats[]>((resolve, reject) => {
+        const request = statsStore.getAll();
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      }),
+      new Promise<CardSRS[]>((resolve, reject) => {
+        const request = srsStore.getAll();
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      })
+    ]);
+
     const data = {
-      wordbooks: await this.getAllWordbooks(),
-      cards: [],
-      card_stats: [],
-      card_srs: [],
+      version: 1,
+      wordbooks,
+      cards,
+      card_stats: cardStats,
+      card_srs: cardSrs,
       settings: await this.getUserSettings(),
       exported_at: new Date().toISOString(),
     };
-
-    // Get all cards, stats, and SRS data
-    const cardStore = await this.getStore('cards');
-    const statsStore = await this.getStore('card_stats');
-    const srsStore = await this.getStore('card_srs');
-
-    data.cards = await new Promise((resolve, reject) => {
-      const request = cardStore.getAll();
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-
-    data.card_stats = await new Promise((resolve, reject) => {
-      const request = statsStore.getAll();
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-
-    data.card_srs = await new Promise((resolve, reject) => {
-      const request = srsStore.getAll();
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
 
     return JSON.stringify(data, null, 2);
   }
