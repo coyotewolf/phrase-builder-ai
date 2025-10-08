@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Plus, ArrowLeft, Trash2, Upload, Sparkles, Edit, Settings, X } from "lucide-react";
+import { Plus, ArrowLeft, Trash2, Upload, Sparkles, Edit, Settings, X, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,7 @@ import { AddCardDialog } from "@/components/AddCardDialog";
 import { EditCardDialog } from "@/components/EditCardDialog";
 import { EditWordbookDialog } from "@/components/EditWordbookDialog";
 import { RegenerateCardsDialog } from "@/components/RegenerateCardsDialog";
+import { ReviewModeDialog } from "@/components/ReviewModeDialog";
 
 const WordbookDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -45,6 +46,7 @@ const WordbookDetail = () => {
   const [isLongPressing, setIsLongPressing] = useState(false);
   const [isFilling, setIsFilling] = useState(false);
   const [initialSelectionState, setInitialSelectionState] = useState<Map<string, boolean>>(new Map());
+  const [isReviewModeDialogOpen, setIsReviewModeDialogOpen] = useState(false);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const autoScrollInterval = useRef<NodeJS.Timeout | null>(null);
   const longPressedCardId = useRef<string | null>(null);
@@ -1034,6 +1036,51 @@ const WordbookDetail = () => {
           </div>
         )}
       </div>
+
+      <ApiKeyDialog
+        open={isApiKeyDialogOpen}
+        onOpenChange={setIsApiKeyDialogOpen}
+        currentApiKey={undefined}
+        onSave={() => {}}
+      />
+
+      <AddCardDialog
+        open={isAddDialogOpen}
+        onOpenChange={setIsAddDialogOpen}
+        onAdd={handleAddCard}
+        wordbookLevel={wordbook?.level}
+      />
+
+      <EditCardDialog
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        card={selectedCard}
+        onSave={handleSaveCard}
+        wordbookLevel={wordbook?.level}
+      />
+
+      <EditWordbookDialog
+        open={isEditWordbookDialogOpen}
+        onOpenChange={setIsEditWordbookDialogOpen}
+        wordbook={wordbook}
+        onSave={handleSaveWordbook}
+        onFillIncomplete={handleFillIncompleteCards}
+      />
+
+      <RegenerateCardsDialog
+        open={isRegenerateDialogOpen}
+        onOpenChange={setIsRegenerateDialogOpen}
+        onConfirm={handleRegenerateAllCards}
+        level={pendingLevel || wordbook?.level || ""}
+        cardCount={cards.length}
+      />
+
+      <ReviewModeDialog
+        open={isReviewModeDialogOpen}
+        onOpenChange={setIsReviewModeDialogOpen}
+        onSelect={(mode) => navigate(`/review?mode=wordbook&wordbookId=${id}&order=${mode}`)}
+        wordbookName={wordbook?.name || ""}
+      />
     </div>
   );
 };

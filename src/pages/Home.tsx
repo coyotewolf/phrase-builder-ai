@@ -76,6 +76,12 @@ const Home = () => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      yesterday.setHours(0, 0, 0, 0);
+      const yesterdayEnd = new Date(yesterday);
+      yesterdayEnd.setHours(23, 59, 59, 999);
+      
       // Filter wordbooks based on selection
       const targetWordbooks = allWordbooks.filter(wb => 
         selectedWordbooks.length === 0 || selectedWordbooks.includes(wb.id)
@@ -83,25 +89,26 @@ const Home = () => {
       
       let count = 0;
       let total = 0;
-      let dueCardsCount = 0;
+      let yesterdayCardsCount = 0;
       
       for (const wordbook of targetWordbooks) {
         const cards = await db.getCardsByWordbook(wordbook.id);
         total += cards.length;
         
         for (const card of cards) {
-          // Count due cards
-          const srs = await db.getCardSRS(card.id);
-          if (srs && new Date(srs.due_at) <= new Date()) {
-            dueCardsCount++;
-          }
-          
-          // Count today's reviewed cards
           const stats = await db.getCardStats(card.id);
           if (stats?.last_reviewed_at) {
             const reviewDate = new Date(stats.last_reviewed_at);
-            reviewDate.setHours(0, 0, 0, 0);
-            if (reviewDate.getTime() === today.getTime()) {
+            
+            // Count yesterday's reviewed cards for due count
+            if (reviewDate >= yesterday && reviewDate <= yesterdayEnd) {
+              yesterdayCardsCount++;
+            }
+            
+            // Count today's reviewed cards
+            const todayReviewDate = new Date(reviewDate);
+            todayReviewDate.setHours(0, 0, 0, 0);
+            if (todayReviewDate.getTime() === today.getTime()) {
               count++;
             }
           }
@@ -110,7 +117,7 @@ const Home = () => {
       
       setTodayCompleted(count);
       setTotalWords(total);
-      setDueCount(dueCardsCount);
+      setDueCount(yesterdayCardsCount);
 
       // Calculate streak
       let streak = 0;
@@ -239,33 +246,20 @@ const Home = () => {
           <h2 className="text-2xl font-bold">開始學習</h2>
           
           <Card
-            className="relative overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform group"
+            className="p-6 cursor-pointer hover:bg-muted/50 transition-colors"
             onClick={() => navigate("/review?mode=yesterday")}
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent" />
-            <div className="relative p-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-3 flex-1">
-                  <div className="flex items-center gap-3">
-                    <div className="p-3 bg-primary/20 rounded-2xl">
-                      <Clock className="h-8 w-8 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="text-2xl font-bold">待複習</h3>
-                      <p className="text-sm text-muted-foreground">複習昨天學習的單字</p>
-                    </div>
-                  </div>
-                  <div className="pl-14">
-                    <div className="text-5xl font-bold bg-gradient-to-r from-primary to-primary/50 bg-clip-text text-transparent">
-                      {dueCount}
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1">張卡片等待複習</p>
-                  </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-background rounded-2xl">
+                  <Clock className="h-8 w-8" />
                 </div>
-                <div className="p-4 bg-primary/10 rounded-2xl group-hover:bg-primary/20 transition-colors">
-                  <Play className="h-8 w-8 text-primary" />
+                <div>
+                  <h3 className="text-xl font-semibold">待複習</h3>
+                  <p className="text-muted-foreground">複習昨天的 {dueCount} 張卡片</p>
                 </div>
               </div>
+              <Play className="h-6 w-6 text-muted-foreground" />
             </div>
           </Card>
 

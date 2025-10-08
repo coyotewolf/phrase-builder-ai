@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, BookOpen, MoreVertical, Clock, Sparkles } from "lucide-react";
+import { Plus, BookOpen, MoreVertical, Clock, Sparkles, ArrowUpDown, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -26,15 +26,18 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { db, Wordbook } from "@/lib/db";
 import { toast } from "sonner";
 import BottomNav from "@/components/BottomNav";
 import { GenerateWordbookDialog } from "@/components/GenerateWordbookDialog";
+import { ReviewModeDialog } from "@/components/ReviewModeDialog";
 
 interface WordbookWithStats extends Wordbook {
   cardCount: number;
   dueCount: number;
+  errorCount: number;
 }
 
 const Wordbooks = () => {
@@ -46,10 +49,13 @@ const Wordbooks = () => {
   const [newWordbookLevel, setNewWordbookLevel] = useState("不限制");
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<'name' | 'created' | 'errors'>('created');
+  const [isReviewModeDialogOpen, setIsReviewModeDialogOpen] = useState(false);
+  const [selectedWordbookForReview, setSelectedWordbookForReview] = useState<WordbookWithStats | null>(null);
 
   useEffect(() => {
     loadWordbooks();
-  }, []);
+  }, [sortBy]);
 
   const loadWordbooks = async () => {
     try {
@@ -63,15 +69,38 @@ const Wordbooks = () => {
           const dueCardIds = new Set(allDueCards.map(srs => srs.card_id));
           const bookDueCount = cards.filter(card => dueCardIds.has(card.id)).length;
           
+          // Calculate error count
+          let totalErrors = 0;
+          for (const card of cards) {
+            const stats = await db.getCardStats(card.id);
+            if (stats) {
+              totalErrors += stats.wrong_count;
+            }
+          }
+          
           return {
             ...book,
             cardCount: cards.length,
             dueCount: bookDueCount,
+            errorCount: totalErrors,
           };
         })
       );
       
-      setWordbooks(booksWithStats);
+      // Sort wordbooks
+      const sorted = [...booksWithStats].sort((a, b) => {
+        switch (sortBy) {
+          case 'name':
+            return a.name.localeCompare(b.name, 'zh-TW');
+          case 'errors':
+            return b.errorCount - a.errorCount;
+          case 'created':
+          default:
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        }
+      });
+      
+      setWordbooks(sorted);
     } catch (error) {
       console.error("Failed to load wordbooks:", error);
       toast.error("載入單詞書失敗");
@@ -126,6 +155,25 @@ const Wordbooks = () => {
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">單詞書</h1>
           <div className="flex gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <ArrowUpDown className="h-4 w-4" />
+                  排序
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setSortBy('created')}>
+                  按添加時間
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortBy('name')}>
+                  按字母順序
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortBy('errors')}>
+                  按錯誤次數
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               variant="outline"
               size="sm"
@@ -166,11 +214,13 @@ const Wordbooks = () => {
             {wordbooks.map((wordbook) => (
               <Card
                 key={wordbook.id}
-                className="p-6 cursor-pointer hover:bg-muted/50 transition-colors"
-                onClick={() => navigate(`/wordbooks/${wordbook.id}`)}
+                className="p-6 hover:bg-muted/50 transition-colors"
               >
                 <div className="flex items-start justify-between">
-                  <div className="flex-1 space-y-2">
+                  <div 
+                    className="flex-1 space-y-2 cursor-pointer"
+                    onClick={() => navigate(`/wordbooks/${wordbook.id}`)}
+                  >
                     <h3 className="text-xl font-semibold">{wordbook.name}</h3>
                      {wordbook.description && (
                       <p className="text-sm text-muted-foreground">
@@ -195,24 +245,37 @@ const Wordbooks = () => {
                       )}
                     </div>
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" size="icon">
-                        <MoreVertical className="h-5 w-5" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        className="text-destructive"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteWordbook(wordbook.id);
-                        }}
-                      >
-                        刪除
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedWordbookForReview(wordbook);
+                        setIsReviewModeDialogOpen(true);
+                      }}
+                    >
+                      <Play className="h-5 w-5" />
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon">
+                          <MoreVertical className="h-5 w-5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteWordbook(wordbook.id);
+                          }}
+                        >
+                          刪除
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
               </Card>
             ))}
@@ -290,6 +353,17 @@ const Wordbooks = () => {
           open={isGenerateDialogOpen}
           onOpenChange={setIsGenerateDialogOpen}
           onSuccess={loadWordbooks}
+        />
+
+        <ReviewModeDialog
+          open={isReviewModeDialogOpen}
+          onOpenChange={setIsReviewModeDialogOpen}
+          onSelect={(mode) => {
+            if (selectedWordbookForReview) {
+              navigate(`/review?mode=wordbook&wordbookId=${selectedWordbookForReview.id}&order=${mode}`);
+            }
+          }}
+          wordbookName={selectedWordbookForReview?.name || ""}
         />
       </div>
 

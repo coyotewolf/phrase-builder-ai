@@ -134,6 +134,18 @@ const Review = () => {
           filteredCards = yesterdayCards.filter((c): c is VocabCard => c !== null);
           break;
         }
+        case "wordbook": {
+          const wordbookId = searchParams.get("wordbookId");
+          const order = searchParams.get("order");
+          
+          if (wordbookId) {
+            const wordbookCards = await db.getCardsByWordbook(wordbookId);
+            filteredCards = order === 'random' 
+              ? [...wordbookCards].sort(() => Math.random() - 0.5)
+              : wordbookCards;
+          }
+          break;
+        }
         case "new": {
           const newCards = await Promise.all(
             allCards.map(async (card) => {
@@ -326,6 +338,7 @@ const Review = () => {
           <p className="text-sm text-muted-foreground mb-4">
             {mode === "due" && "太棒了！你已經完成所有到期的複習"}
             {mode === "yesterday" && "昨天沒有複習任何單字"}
+            {mode === "wordbook" && "這個單詞書沒有卡片"}
             {mode === "new" && "沒有新的單字卡"}
             {mode === "frequent-errors" && "沒有錯誤記錄"}
           </p>
