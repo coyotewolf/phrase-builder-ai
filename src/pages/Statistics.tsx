@@ -531,11 +531,11 @@ const Statistics = () => {
                   />
                 </div>
                 <div className="text-xs text-muted-foreground font-medium space-y-0.5">
-                  <div>{progressLabels[index]}</div>
                   <div className="flex gap-2 justify-center">
                     <span className="text-teal">{data.learned > 0 ? data.learned : ''}</span>
                     <span className="text-yellow">{data.reviewed > 0 ? data.reviewed : ''}</span>
                   </div>
+                  <div>{progressLabels[index]}</div>
                 </div>
               </div>
             ))}
