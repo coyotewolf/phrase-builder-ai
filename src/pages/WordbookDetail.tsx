@@ -62,7 +62,10 @@ const WordbookDetail = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [isFilling, setIsFilling] = useState(false);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const autoScrollInterval = useRef<NodeJS.Timeout | null>(null);
   const LONG_PRESS_DURATION = 500; // 500ms for long press
+  const SCROLL_EDGE_THRESHOLD = 80; // Distance from edge to trigger scroll
+  const SCROLL_SPEED = 10; // Pixels to scroll per interval
 
   useEffect(() => {
     loadData();
@@ -389,6 +392,7 @@ const WordbookDetail = () => {
   const handleCardLongPress = (cardId: string) => {
     if (!isSelectionMode) {
       enterSelectionMode(cardId);
+      setIsDragging(true); // Enable dragging immediately after long press
     }
   };
 
@@ -397,8 +401,6 @@ const WordbookDetail = () => {
       longPressTimer.current = setTimeout(() => {
         handleCardLongPress(cardId);
       }, LONG_PRESS_DURATION);
-    } else {
-      setIsDragging(true);
     }
   };
 
@@ -408,12 +410,43 @@ const WordbookDetail = () => {
       longPressTimer.current = null;
     }
     setIsDragging(false);
+    stopAutoScroll();
   };
 
   const handleCardTouchMove = () => {
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
+    }
+  };
+
+  const startAutoScroll = (clientY: number) => {
+    const windowHeight = window.innerHeight;
+    const scrollTop = window.scrollY || window.pageYOffset;
+    
+    if (clientY < SCROLL_EDGE_THRESHOLD) {
+      // Scroll up
+      if (!autoScrollInterval.current) {
+        autoScrollInterval.current = setInterval(() => {
+          window.scrollBy(0, -SCROLL_SPEED);
+        }, 16);
+      }
+    } else if (clientY > windowHeight - SCROLL_EDGE_THRESHOLD) {
+      // Scroll down
+      if (!autoScrollInterval.current) {
+        autoScrollInterval.current = setInterval(() => {
+          window.scrollBy(0, SCROLL_SPEED);
+        }, 16);
+      }
+    } else {
+      stopAutoScroll();
+    }
+  };
+
+  const stopAutoScroll = () => {
+    if (autoScrollInterval.current) {
+      clearInterval(autoScrollInterval.current);
+      autoScrollInterval.current = null;
     }
   };
 
@@ -754,11 +787,15 @@ const WordbookDetail = () => {
                       handleCardTouchMove();
                       if (isSelectionMode && isDragging) {
                         const touch = e.touches[0];
+                        
+                        // Auto-scroll when near edges
+                        startAutoScroll(touch.clientY);
+                        
                         const element = document.elementFromPoint(touch.clientX, touch.clientY);
                         const cardElement = element?.closest('[data-card-id]');
                         if (cardElement) {
                           const hoveredCardId = cardElement.getAttribute('data-card-id');
-                          if (hoveredCardId && !selectedCardIds.has(hoveredCardId)) {
+                          if (hoveredCardId) {
                             toggleCardSelection(hoveredCardId);
                           }
                         }
@@ -766,10 +803,7 @@ const WordbookDetail = () => {
                     }}
                     onMouseDown={(e) => {
                       e.stopPropagation();
-                      if (isSelectionMode) {
-                        toggleCardSelection(card.id);
-                        setIsDragging(true);
-                      } else {
+                      if (!isSelectionMode) {
                         handleCardTouchStart(card.id);
                       }
                     }}
@@ -777,11 +811,15 @@ const WordbookDetail = () => {
                       e.stopPropagation();
                       handleCardTouchEnd();
                     }}
+                    onMouseMove={(e) => {
+                      if (isSelectionMode && isDragging) {
+                        // Auto-scroll when near edges
+                        startAutoScroll(e.clientY);
+                      }
+                    }}
                     onMouseEnter={() => {
                       if (isSelectionMode && isDragging) {
-                        if (!selectedCardIds.has(card.id)) {
-                          toggleCardSelection(card.id);
-                        }
+                        toggleCardSelection(card.id);
                       }
                     }}
                     data-card-id={card.id}
