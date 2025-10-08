@@ -4,6 +4,16 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { ChevronRight, Target, Globe, Volume2, Bell, Upload, Download, Info, Key } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { db, UserSettings as UserSettingsType } from "@/lib/db";
 import { toast } from "sonner";
 import BottomNav from "@/components/BottomNav";
@@ -28,6 +38,8 @@ const Settings = () => {
   const [isDisplayDirectionDialogOpen, setIsDisplayDirectionDialogOpen] = useState(false);
   const [isTTSDialogOpen, setIsTTSDialogOpen] = useState(false);
   const [isRemindersDialogOpen, setIsRemindersDialogOpen] = useState(false);
+  const [isImportConfirmOpen, setIsImportConfirmOpen] = useState(false);
+  const [importData, setImportData] = useState<{ data: any; event: React.ChangeEvent<HTMLInputElement> } | null>(null);
 
   useEffect(() => {
     loadSettings();
@@ -121,25 +133,32 @@ const Settings = () => {
         return;
       }
 
-      // Confirm before import
-      const confirmed = confirm(
-        `即將導入備份數據：\n` +
-        `- ${data.wordbooks?.length || 0} 個單詞書\n` +
-        `- ${data.cards?.length || 0} 張卡片\n\n` +
-        `警告：這將覆蓋當前所有數據！確定要繼續嗎？`
-      );
+      // Show confirmation dialog
+      setImportData({ data, event });
+      setIsImportConfirmOpen(true);
+    } catch (error) {
+      console.error("Failed to import data:", error);
+      toast.error("導入數據失敗：" + (error instanceof Error ? error.message : "請確認文件格式正確"));
+      // Clear the file input on error
+      event.target.value = '';
+    }
+  };
 
-      if (!confirmed) {
-        toast.info("已取消導入");
-        return;
-      }
+  const confirmImport = async () => {
+    if (!importData) return;
 
+    try {
       toast.info("正在導入數據，請稍候...");
+      const text = await importData.event.target.files![0].text();
       await db.importAllData(text);
       toast.success("數據導入成功！頁面將自動刷新");
       
       // Clear the file input
-      event.target.value = '';
+      importData.event.target.value = '';
+      
+      // Reset state
+      setImportData(null);
+      setIsImportConfirmOpen(false);
       
       // Reload settings and page
       await loadSettings();
@@ -149,8 +168,11 @@ const Settings = () => {
     } catch (error) {
       console.error("Failed to import data:", error);
       toast.error("導入數據失敗：" + (error instanceof Error ? error.message : "請確認文件格式正確"));
-      // Clear the file input on error
-      event.target.value = '';
+      if (importData.event.target) {
+        importData.event.target.value = '';
+      }
+      setImportData(null);
+      setIsImportConfirmOpen(false);
     }
   };
 
@@ -437,6 +459,38 @@ const Settings = () => {
           }
         }}
       />
+
+      <AlertDialog open={isImportConfirmOpen} onOpenChange={setIsImportConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>確認導入備份數據</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>即將導入以下備份數據：</p>
+              <ul className="list-disc list-inside space-y-1 text-foreground">
+                <li>{importData?.data.wordbooks?.length || 0} 個單詞書</li>
+                <li>{importData?.data.cards?.length || 0} 張卡片</li>
+              </ul>
+              <p className="text-destructive font-semibold pt-2">
+                ⚠️ 警告：這將覆蓋當前所有數據！
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              toast.info("已取消導入");
+              if (importData?.event.target) {
+                importData.event.target.value = '';
+              }
+              setImportData(null);
+            }}>
+              取消
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmImport}>
+              確認導入
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <BottomNav />
     </div>
