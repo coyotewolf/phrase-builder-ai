@@ -25,6 +25,7 @@ const Review = () => {
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const [ttsVoice, setTtsVoice] = useState<'en-US' | 'en-GB'>('en-US');
   const [ttsAutoPlay, setTtsAutoPlay] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
 
   const x = useMotionValue(0);
   const y = useMotionValue(0);
@@ -183,10 +184,11 @@ const Review = () => {
         setCurrentIndex(currentIndex + 1);
         setIsFlipped(false);
         setIsDetailOpen(false);
-        // Reset motion values for next card
+        // Reset motion values and animation state for next card
         setTimeout(() => {
           x.set(0);
           y.set(0);
+          setIsAnimating(false);
         }, 100);
       } else {
         toast.success("複習完成！");
@@ -213,6 +215,7 @@ const Review = () => {
     // Check for horizontal swipe (left/right)
     if (Math.abs(info.offset.x) > swipeThreshold) {
       const correct = info.offset.x > 0;
+      setIsAnimating(true);
       // Animate card off screen
       const exitX = info.offset.x > 0 ? 500 : -500;
       x.set(exitX);
@@ -299,8 +302,8 @@ const Review = () => {
       {/* Card Container with Stack Effect */}
       <div className="flex items-center justify-center px-4 relative" style={{ height: "calc(100vh - 280px)" }}>
         <div className="w-full max-w-md relative" style={{ height: "400px" }}>
-          {/* Next card (underneath) */}
-          {currentIndex < cards.length - 1 && (
+          {/* Next card (underneath) - hidden during animation */}
+          {currentIndex < cards.length - 1 && !isAnimating && (
             <Card
               className="absolute inset-0 shadow-xl"
               style={{
@@ -436,6 +439,7 @@ const Review = () => {
           size="lg"
           className="rounded-full w-16 h-16"
           onClick={() => {
+            setIsAnimating(true);
             x.set(-500);
             setTimeout(() => handleAnswer(false), 200);
           }}
@@ -456,6 +460,7 @@ const Review = () => {
           size="lg"
           className="rounded-full w-16 h-16 bg-success hover:bg-success/90"
           onClick={() => {
+            setIsAnimating(true);
             x.set(500);
             setTimeout(() => handleAnswer(true), 200);
           }}
