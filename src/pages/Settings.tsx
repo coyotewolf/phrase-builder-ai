@@ -59,7 +59,17 @@ const Settings = () => {
 
   const handleExport = async () => {
     try {
+      toast.info("正在準備導出數據...");
       const data = await db.exportAllData();
+      
+      // Parse to verify it's valid JSON
+      const parsed = JSON.parse(data);
+      const totalItems = 
+        (parsed.wordbooks?.length || 0) + 
+        (parsed.cards?.length || 0) + 
+        (parsed.card_stats?.length || 0) + 
+        (parsed.card_srs?.length || 0);
+      
       const blob = new Blob([data], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -69,10 +79,11 @@ const Settings = () => {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast.success("數據導出成功");
+      
+      toast.success(`數據導出成功！包含 ${parsed.wordbooks?.length || 0} 個單詞書，${parsed.cards?.length || 0} 張卡片`);
     } catch (error) {
       console.error("Failed to export data:", error);
-      toast.error("導出數據失敗");
+      toast.error("導出數據失敗：" + (error instanceof Error ? error.message : "未知錯誤"));
     }
   };
 
@@ -80,15 +91,66 @@ const Settings = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Validate file type
+    if (!file.name.endsWith('.json')) {
+      toast.error("請選擇 JSON 格式的備份文件");
+      return;
+    }
+
+    if (file.size > 50 * 1024 * 1024) { // 50MB limit
+      toast.error("文件大小超過限制（最大 50MB）");
+      return;
+    }
+
     try {
+      toast.info("正在讀取文件...");
       const text = await file.text();
+      
+      // Validate JSON format
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        toast.error("文件格式無效，請確認是正確的備份文件");
+        return;
+      }
+
+      // Validate data structure
+      if (!data.wordbooks && !data.cards) {
+        toast.error("備份文件格式不正確");
+        return;
+      }
+
+      // Confirm before import
+      const confirmed = confirm(
+        `即將導入備份數據：\n` +
+        `- ${data.wordbooks?.length || 0} 個單詞書\n` +
+        `- ${data.cards?.length || 0} 張卡片\n\n` +
+        `警告：這將覆蓋當前所有數據！確定要繼續嗎？`
+      );
+
+      if (!confirmed) {
+        toast.info("已取消導入");
+        return;
+      }
+
+      toast.info("正在導入數據，請稍候...");
       await db.importAllData(text);
-      toast.success("數據導入成功");
-      loadSettings();
-      window.location.reload();
+      toast.success("數據導入成功！頁面將自動刷新");
+      
+      // Clear the file input
+      event.target.value = '';
+      
+      // Reload settings and page
+      await loadSettings();
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     } catch (error) {
       console.error("Failed to import data:", error);
-      toast.error("導入數據失敗，請確認文件格式正確");
+      toast.error("導入數據失敗：" + (error instanceof Error ? error.message : "請確認文件格式正確"));
+      // Clear the file input on error
+      event.target.value = '';
     }
   };
 
@@ -242,6 +304,31 @@ const Settings = () => {
           </Card>
 
           <Card className="p-4">
+            <input
+              type="file"
+              accept=".json"
+              onChange={handleImport}
+              className="hidden"
+              id="import-backup"
+            />
+            <button 
+              className="w-full flex items-center justify-between"
+              onClick={() => document.getElementById('import-backup')?.click()}
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-background rounded-lg">
+                  <Upload className="h-5 w-5" />
+                </div>
+                <div className="text-left">
+                  <p className="font-medium">匯入備份數據</p>
+                  <p className="text-sm text-muted-foreground">從 JSON 備份檔案還原</p>
+                </div>
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+            </button>
+          </Card>
+
+          <Card className="p-4">
             <button className="w-full flex items-center justify-between" onClick={handleExport}>
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-background rounded-lg">
@@ -249,7 +336,7 @@ const Settings = () => {
                 </div>
                 <div className="text-left">
                   <p className="font-medium">匯出資料</p>
-                  <p className="text-sm text-muted-foreground">備份你的學習進度</p>
+                  <p className="text-sm text-muted-foreground">備份你的學習進度到 JSON 檔案</p>
                 </div>
               </div>
               <ChevronRight className="h-5 w-5 text-muted-foreground" />
