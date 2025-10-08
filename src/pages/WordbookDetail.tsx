@@ -814,16 +814,18 @@ const WordbookDetail = () => {
                       touchAction: isSelectionMode ? 'none' : 'auto'
                     }}
                     onTouchStart={(e) => {
-                      e.stopPropagation();
                       handleCardTouchStart(card.id, e);
                     }}
                     onTouchEnd={(e) => {
-                      e.stopPropagation();
                       handleCardTouchEnd();
                     }}
                     onTouchMove={(e) => {
-                      e.stopPropagation();
                       handleCardTouchMove();
+                      
+                      // Only prevent default if in selection mode or long press active
+                      if (longPressTimer.current || (isDragging && isSelectionMode)) {
+                        e.preventDefault();
+                      }
                       
                       if (isDragging && isSelectionMode) {
                         const touch = e.touches[0];
