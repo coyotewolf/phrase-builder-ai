@@ -206,7 +206,7 @@ const Statistics = () => {
        * - 複習：卡片被複習（last_reviewed_at 日期，且不等於 created_at 日期）
        */
       
-      if (activeTab === "7days" || activeTab === "all") {
+      if (activeTab === "7days") {
         // 7天模式：每天顯示
         const dailyLearned = new Map<string, Set<string>>();
         const dailyReviewed = new Map<string, Set<string>>();
@@ -236,9 +236,8 @@ const Statistics = () => {
         
         const progressData: { learned: number; reviewed: number }[] = [];
         const labels: string[] = [];
-        const days = activeTab === "7days" ? 7 : 30;
         
-        for (let i = days - 1; i >= 0; i--) {
+        for (let i = 6; i >= 0; i--) {
           const checkDate = new Date();
           checkDate.setDate(checkDate.getDate() - i);
           checkDate.setHours(0, 0, 0, 0);
@@ -251,6 +250,54 @@ const Statistics = () => {
           
           const dayOfWeek = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"][checkDate.getDay()];
           labels.push(dayOfWeek);
+        }
+        
+        setWeeklyProgress(progressData);
+        setProgressLabels(labels);
+        
+      } else if (activeTab === "all") {
+        // 全部模式：按月顯示最近6個月
+        const monthlyLearned = new Map<string, Set<string>>();
+        const monthlyReviewed = new Map<string, Set<string>>();
+        
+        for (const { card, stats } of allCardsWithStats) {
+          // 學習：卡片創建日期
+          const createdDate = new Date(card.created_at);
+          const monthKey = `${createdDate.getFullYear()}-${String(createdDate.getMonth() + 1).padStart(2, '0')}`;
+          
+          if (!monthlyLearned.has(monthKey)) monthlyLearned.set(monthKey, new Set());
+          monthlyLearned.get(monthKey)!.add(card.id);
+          
+          // 複習：最後複習日期（如果存在且不等於創建日期）
+          if (stats?.last_reviewed_at) {
+            const reviewDate = new Date(stats.last_reviewed_at);
+            const createdKey = createdDate.toISOString().split('T')[0];
+            const reviewKey = reviewDate.toISOString().split('T')[0];
+            
+            // 只有當複習日期不同於創建日期時才算作複習
+            if (reviewKey !== createdKey) {
+              const reviewMonthKey = `${reviewDate.getFullYear()}-${String(reviewDate.getMonth() + 1).padStart(2, '0')}`;
+              if (!monthlyReviewed.has(reviewMonthKey)) monthlyReviewed.set(reviewMonthKey, new Set());
+              monthlyReviewed.get(reviewMonthKey)!.add(card.id);
+            }
+          }
+        }
+        
+        const progressData: { learned: number; reviewed: number }[] = [];
+        const labels: string[] = [];
+        
+        // 顯示最近6個月
+        for (let i = 5; i >= 0; i--) {
+          const checkDate = new Date();
+          checkDate.setMonth(checkDate.getMonth() - i);
+          const monthKey = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}`;
+          
+          progressData.push({
+            learned: monthlyLearned.get(monthKey)?.size || 0,
+            reviewed: monthlyReviewed.get(monthKey)?.size || 0
+          });
+          
+          labels.push(`${checkDate.getMonth() + 1}月`);
         }
         
         setWeeklyProgress(progressData);
@@ -451,7 +498,7 @@ const Statistics = () => {
         <Card className="p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">
-              {activeTab === "30days" ? "每月進度" : "每週進度"}
+              {activeTab === "30days" ? "每月進度" : activeTab === "all" ? "學習趨勢" : "每週進度"}
             </h2>
             <div className="flex gap-4 text-xs">
               <div className="flex items-center gap-2">
