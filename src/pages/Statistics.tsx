@@ -40,10 +40,17 @@ const Statistics = () => {
     { level: "Advanced", current: 40, total: 80, percentage: 50, color: "bg-destructive" },
   ]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isChartLoading, setIsChartLoading] = useState(false);
   const [isErrorFilterDialogOpen, setIsErrorFilterDialogOpen] = useState(false);
 
   useEffect(() => {
-    loadStatistics();
+    if (isLoading) {
+      // Initial load - load everything
+      loadStatistics();
+    } else {
+      // Tab change - only reload chart data
+      loadChartData();
+    }
   }, [activeTab]);
 
   /**
@@ -61,6 +68,171 @@ const Statistics = () => {
     const days = range === "7days" ? 7 : 30;
     date.setDate(date.getDate() - days);
     return date;
+  };
+
+  const loadChartData = async () => {
+    try {
+      setIsChartLoading(true);
+
+      // 獲取所有單詞書和卡片
+      const allWordbooks = await db.getAllWordbooks();
+      
+      interface CardWithStats {
+        card: CardType;
+        stats: CardStats | null;
+      }
+      const allCardsWithStats: CardWithStats[] = [];
+      
+      for (const wordbook of allWordbooks) {
+        const cards = await db.getCardsByWordbook(wordbook.id);
+        for (const card of cards) {
+          const stats = await db.getCardStats(card.id);
+          allCardsWithStats.push({ card, stats });
+        }
+      }
+
+      // Generate chart data based on activeTab
+      if (activeTab === "7days") {
+        // 7天模式：每天顯示
+        const dailyLearned = new Map<string, Set<string>>();
+        const dailyReviewed = new Map<string, Set<string>>();
+        
+        for (const { card, stats } of allCardsWithStats) {
+          const createdDate = new Date(card.created_at);
+          createdDate.setHours(0, 0, 0, 0);
+          const createdKey = createdDate.toISOString();
+          
+          if (!dailyLearned.has(createdKey)) dailyLearned.set(createdKey, new Set());
+          dailyLearned.get(createdKey)!.add(card.id);
+          
+          if (stats?.last_reviewed_at) {
+            const reviewDate = new Date(stats.last_reviewed_at);
+            reviewDate.setHours(0, 0, 0, 0);
+            const reviewKey = reviewDate.toISOString();
+            
+            if (reviewKey !== createdKey) {
+              if (!dailyReviewed.has(reviewKey)) dailyReviewed.set(reviewKey, new Set());
+              dailyReviewed.get(reviewKey)!.add(card.id);
+            }
+          }
+        }
+        
+        const progressData: { learned: number; reviewed: number }[] = [];
+        const labels: string[] = [];
+        
+        for (let i = 6; i >= 0; i--) {
+          const checkDate = new Date();
+          checkDate.setDate(checkDate.getDate() - i);
+          checkDate.setHours(0, 0, 0, 0);
+          const dateKey = checkDate.toISOString();
+          
+          progressData.push({
+            learned: dailyLearned.get(dateKey)?.size || 0,
+            reviewed: dailyReviewed.get(dateKey)?.size || 0
+          });
+          
+          const dayOfWeek = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"][checkDate.getDay()];
+          labels.push(dayOfWeek);
+        }
+        
+        setWeeklyProgress(progressData);
+        setProgressLabels(labels);
+        
+      } else if (activeTab === "all") {
+        // 全部模式：按月顯示最近6個月
+        const monthlyLearned = new Map<string, Set<string>>();
+        const monthlyReviewed = new Map<string, Set<string>>();
+        
+        for (const { card, stats } of allCardsWithStats) {
+          const createdDate = new Date(card.created_at);
+          const monthKey = `${createdDate.getFullYear()}-${String(createdDate.getMonth() + 1).padStart(2, '0')}`;
+          
+          if (!monthlyLearned.has(monthKey)) monthlyLearned.set(monthKey, new Set());
+          monthlyLearned.get(monthKey)!.add(card.id);
+          
+          if (stats?.last_reviewed_at) {
+            const reviewDate = new Date(stats.last_reviewed_at);
+            const createdKey = createdDate.toISOString().split('T')[0];
+            const reviewKey = reviewDate.toISOString().split('T')[0];
+            
+            if (reviewKey !== createdKey) {
+              const reviewMonthKey = `${reviewDate.getFullYear()}-${String(reviewDate.getMonth() + 1).padStart(2, '0')}`;
+              if (!monthlyReviewed.has(reviewMonthKey)) monthlyReviewed.set(reviewMonthKey, new Set());
+              monthlyReviewed.get(reviewMonthKey)!.add(card.id);
+            }
+          }
+        }
+        
+        const progressData: { learned: number; reviewed: number }[] = [];
+        const labels: string[] = [];
+        
+        for (let i = 5; i >= 0; i--) {
+          const checkDate = new Date();
+          checkDate.setMonth(checkDate.getMonth() - i);
+          const monthKey = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}`;
+          
+          progressData.push({
+            learned: monthlyLearned.get(monthKey)?.size || 0,
+            reviewed: monthlyReviewed.get(monthKey)?.size || 0
+          });
+          
+          labels.push(`${checkDate.getMonth() + 1}月`);
+        }
+        
+        setWeeklyProgress(progressData);
+        setProgressLabels(labels);
+        
+      } else {
+        // 30天模式：按週顯示
+        const weeklyLearned = [new Set<string>(), new Set<string>(), new Set<string>(), new Set<string>()];
+        const weeklyReviewed = [new Set<string>(), new Set<string>(), new Set<string>(), new Set<string>()];
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        for (const { card, stats } of allCardsWithStats) {
+          const createdDate = new Date(card.created_at);
+          createdDate.setHours(0, 0, 0, 0);
+          const daysAgoCreated = Math.floor((today.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
+          
+          if (daysAgoCreated >= 0 && daysAgoCreated < 30) {
+            const weekIndex = 3 - Math.floor(daysAgoCreated / 7);
+            if (weekIndex >= 0 && weekIndex < 4) {
+              weeklyLearned[weekIndex].add(card.id);
+            }
+          }
+          
+          if (stats?.last_reviewed_at) {
+            const reviewDate = new Date(stats.last_reviewed_at);
+            reviewDate.setHours(0, 0, 0, 0);
+            const daysAgoReview = Math.floor((today.getTime() - reviewDate.getTime()) / (1000 * 60 * 60 * 24));
+            
+            const createdKey = createdDate.toISOString();
+            const reviewKey = reviewDate.toISOString();
+            
+            if (reviewKey !== createdKey && daysAgoReview >= 0 && daysAgoReview < 30) {
+              const weekIndex = 3 - Math.floor(daysAgoReview / 7);
+              if (weekIndex >= 0 && weekIndex < 4) {
+                weeklyReviewed[weekIndex].add(card.id);
+              }
+            }
+          }
+        }
+        
+        const progressData: { learned: number; reviewed: number }[] = weeklyLearned.map((learnedSet, index) => ({
+          learned: learnedSet.size,
+          reviewed: weeklyReviewed[index].size
+        }));
+        
+        setWeeklyProgress(progressData);
+        setProgressLabels(["第一週", "第二週", "第三週", "第四週"]);
+      }
+
+      setIsChartLoading(false);
+    } catch (error) {
+      console.error("Failed to load chart data:", error);
+      setIsChartLoading(false);
+    }
   };
 
   const loadStatistics = async () => {
@@ -511,7 +683,7 @@ const Statistics = () => {
               </div>
             </div>
           </div>
-          <div className="flex items-end justify-between gap-3 h-36">
+          <div className={`flex items-end justify-between gap-3 h-36 transition-opacity duration-300 ${isChartLoading ? 'opacity-50' : 'opacity-100'}`}>
             {weeklyProgress.map((data, index) => (
               <div key={index} className="flex-1 flex flex-col items-center gap-2">
                 <div className="w-full relative flex gap-1 items-end" style={{ height: "100px" }}>
