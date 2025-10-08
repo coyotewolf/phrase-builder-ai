@@ -122,7 +122,7 @@ const TodayReviewed = () => {
     <div className="min-h-screen bg-background pb-6">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-        <div className="flex items-center justify-between p-4">
+        <div className="flex items-center justify-between p-4 max-w-7xl mx-auto">
           <Button variant="ghost" size="icon" onClick={() => navigate("/statistics")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
@@ -131,7 +131,7 @@ const TodayReviewed = () => {
         </div>
       </div>
 
-      <div className="p-4 space-y-6">
+      <div className="p-4 space-y-6 max-w-7xl mx-auto">
         {/* Stats Summary */}
         <Card className="p-6 space-y-4">
           <div className="flex items-center justify-between">

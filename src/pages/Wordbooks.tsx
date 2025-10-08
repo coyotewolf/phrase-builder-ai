@@ -120,7 +120,7 @@ const Wordbooks = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20 overflow-x-hidden">
-      <div className="p-4 sm:p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">單詞書</h1>
           <Button

@@ -158,7 +158,7 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-background pb-20 overflow-x-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between p-4">
+      <div className="flex items-center justify-between p-4 max-w-7xl mx-auto">
         <Button 
           variant="ghost" 
           size="icon" 
@@ -177,7 +177,7 @@ const Home = () => {
         </Button>
       </div>
 
-      <div className="px-4 sm:px-6 space-y-6">
+      <div className="px-4 sm:px-6 space-y-6 max-w-7xl mx-auto">
         {/* Greeting */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">

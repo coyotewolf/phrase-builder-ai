@@ -608,7 +608,7 @@ const Statistics = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20 overflow-x-hidden">
-      <div className="p-4 sm:p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
         {/* Header with Tabs */}
         <div className="space-y-4">
           <h1 className="text-3xl font-bold">統計</h1>
