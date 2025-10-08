@@ -32,8 +32,14 @@ const Statistics = () => {
   const [dailyGoal, setDailyGoal] = useState(50);
   const [streakDays, setStreakDays] = useState(0);
   const [weeklyAccuracy, setWeeklyAccuracy] = useState(0);
-  const [weeklyProgress, setWeeklyProgress] = useState<{ learned: number; reviewed: number }[]>([]);
-  const [progressLabels, setProgressLabels] = useState<string[]>([]);
+  const [weeklyProgress, setWeeklyProgress] = useState<{ learned: number; reviewed: number }[]>(() => {
+    // Initialize with placeholder data to prevent flash
+    return Array(7).fill({ learned: 0, reviewed: 0 });
+  });
+  const [progressLabels, setProgressLabels] = useState<string[]>(() => {
+    // Initialize with placeholder labels
+    return Array(7).fill("");
+  });
   const [progressByLevel, setProgressByLevel] = useState<ProgressByLevel[]>([
     { level: "Beginner", current: 85, total: 100, percentage: 85, color: "bg-teal" },
     { level: "Intermediate", current: 120, total: 150, percentage: 80, color: "bg-yellow" },

@@ -202,7 +202,7 @@ const Home = () => {
 
         {/* Wordbook Selection Dialog */}
         {showWordbookSelector && (
-          <Card className="p-4 border-2 border-primary/20">
+          <Card className="p-4 border-2 border-primary/20 absolute top-16 left-4 right-4 z-50 shadow-lg bg-background">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold">選擇目標單詞書</h3>
               <Button
