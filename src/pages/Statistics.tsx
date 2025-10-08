@@ -41,6 +41,23 @@ const Statistics = () => {
     loadStatistics();
   }, [activeTab]);
 
+  /**
+   * 計算時間範圍的起始日期
+   * 演算法：根據選擇的時間範圍返回對應的起始日期
+   * - 7days: 7天前的00:00:00
+   * - 30days: 30天前的00:00:00
+   * - all: null（表示不限制時間）
+   */
+  const getStartDate = (range: TimeRange): Date | null => {
+    if (range === "all") return null;
+    
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    const days = range === "7days" ? 7 : 30;
+    date.setDate(date.getDate() - days);
+    return date;
+  };
+
   const loadStatistics = async () => {
     try {
       setIsLoading(true);
@@ -49,147 +66,200 @@ const Statistics = () => {
       const settings = await db.getUserSettings();
       setDailyGoal(settings.daily_goal);
 
-      // Get all cards with stats and calculate error rates
+      // Get time range filter
+      const startDate = getStartDate(activeTab);
+
+      // 獲取所有單詞書和卡片（優化：一次性載入所有數據）
       const allWordbooks = await db.getAllWordbooks();
-      const errorCardsData: ErrorCard[] = [];
+      
+      // 建立卡片-統計數據的映射表，減少重複查詢
+      interface CardWithStats {
+        card: CardType;
+        stats: CardStats | null;
+        wordbook: typeof allWordbooks[0];
+      }
+      const allCardsWithStats: CardWithStats[] = [];
       
       for (const wordbook of allWordbooks) {
         const cards = await db.getCardsByWordbook(wordbook.id);
-        
         for (const card of cards) {
           const stats = await db.getCardStats(card.id);
-          if (stats && stats.shown_count > 0) {
-            const errorRate = calculateErrorRate(stats.wrong_count, stats.shown_count);
-            if (errorRate > 0) {
-              errorCardsData.push({ card, stats, errorRate });
-            }
+          allCardsWithStats.push({ card, stats, wordbook });
+        }
+      }
+
+      /**
+       * 1. 高錯誤率單字卡計算
+       * 演算法：錯誤率 = (錯誤次數 / 總顯示次數) × 100%
+       * 篩選條件：
+       * - 必須有統計數據且顯示次數 > 0
+       * - 根據時間範圍篩選（如果有設定）
+       * - 錯誤率 > 0
+       * 排序：按錯誤率降序排列
+       * 取前5名
+       */
+      const errorCardsData: ErrorCard[] = [];
+      
+      for (const { card, stats } of allCardsWithStats) {
+        if (stats && stats.shown_count > 0) {
+          // 時間範圍篩選
+          if (startDate && stats.last_reviewed_at) {
+            const reviewDate = new Date(stats.last_reviewed_at);
+            if (reviewDate < startDate) continue;
+          }
+          
+          const errorRate = calculateErrorRate(stats.wrong_count, stats.shown_count);
+          if (errorRate > 0) {
+            errorCardsData.push({ card, stats, errorRate });
           }
         }
       }
       
-      // Sort by error rate and take top errors
       errorCardsData.sort((a, b) => b.errorRate - a.errorRate);
       setErrorCards(errorCardsData.slice(0, 5));
       
-      // Calculate today's reviewed count
+      /**
+       * 2. 今日複習數量
+       * 演算法：計算今天（00:00:00 至當前時間）複習過的卡片數量
+       * 判斷方式：last_reviewed_at >= 今日00:00:00
+       */
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      let count = 0;
-      for (const wordbook of allWordbooks) {
-        const cards = await db.getCardsByWordbook(wordbook.id);
-        for (const card of cards) {
-          const stats = await db.getCardStats(card.id);
-          if (stats?.last_reviewed_at) {
-            const reviewDate = new Date(stats.last_reviewed_at);
-            if (reviewDate >= today) {
-              count++;
-            }
-          }
-        }
-      }
-      setTodayCount(count);
       
-      // Calculate 7-day average accuracy
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const todayReviewed = allCardsWithStats.filter(({ stats }) => {
+        if (!stats?.last_reviewed_at) return false;
+        const reviewDate = new Date(stats.last_reviewed_at);
+        return reviewDate >= today;
+      });
+      
+      setTodayCount(todayReviewed.length);
+      
+      /**
+       * 3. 準確率計算
+       * 演算法：準確率 = (正確次數總和 / 顯示次數總和) × 100%
+       * 時間範圍：根據選擇的tab（7天/30天/全部）
+       * 篩選條件：last_reviewed_at 在時間範圍內
+       * 四捨五入到整數
+       */
       let totalCorrect = 0;
       let totalShown = 0;
       
-      for (const wordbook of allWordbooks) {
-        const cards = await db.getCardsByWordbook(wordbook.id);
-        for (const card of cards) {
-          const stats = await db.getCardStats(card.id);
-          if (stats?.last_reviewed_at) {
-            const reviewDate = new Date(stats.last_reviewed_at);
-            if (reviewDate >= sevenDaysAgo) {
-              totalCorrect += stats.right_count || 0;
-              totalShown += stats.shown_count || 0;
-            }
-          }
+      for (const { stats } of allCardsWithStats) {
+        if (!stats) continue;
+        
+        // 時間範圍篩選
+        if (startDate && stats.last_reviewed_at) {
+          const reviewDate = new Date(stats.last_reviewed_at);
+          if (reviewDate < startDate) continue;
+        }
+        
+        totalCorrect += stats.right_count || 0;
+        totalShown += stats.shown_count || 0;
+      }
+      
+      const accuracy = totalShown > 0 ? Math.round((totalCorrect / totalShown) * 100) : 0;
+      setWeeklyAccuracy(accuracy);
+      
+      /**
+       * 4. 連續學習天數（Streak）
+       * 演算法：從今天開始往前推，計算連續有複習記錄的天數
+       * 邏輯：
+       * - 從今天開始檢查
+       * - 如果當天有任何卡片的 last_reviewed_at 是該天，計數+1
+       * - 繼續檢查前一天
+       * - 如果某天沒有複習記錄，停止計數
+       * 優化：使用 Set 來儲存有複習的日期，避免重複檢查
+       */
+      const reviewDates = new Set<string>();
+      for (const { stats } of allCardsWithStats) {
+        if (stats?.last_reviewed_at) {
+          const reviewDate = new Date(stats.last_reviewed_at);
+          reviewDate.setHours(0, 0, 0, 0);
+          reviewDates.add(reviewDate.toISOString());
         }
       }
       
-      const average = totalShown > 0 ? Math.round((totalCorrect / totalShown) * 100) : 0;
-      setWeeklyAccuracy(average);
-      
-      // Calculate streak days
       let streak = 0;
       const checkDate = new Date();
       checkDate.setHours(0, 0, 0, 0);
       
-      while (true) {
-        let hasReviewOnDate = false;
-        for (const wordbook of allWordbooks) {
-          const cards = await db.getCardsByWordbook(wordbook.id);
-          for (const card of cards) {
-            const stats = await db.getCardStats(card.id);
-            if (stats?.last_reviewed_at) {
-              const reviewDate = new Date(stats.last_reviewed_at);
-              reviewDate.setHours(0, 0, 0, 0);
-              if (reviewDate.getTime() === checkDate.getTime()) {
-                hasReviewOnDate = true;
-                break;
-              }
-            }
-          }
-          if (hasReviewOnDate) break;
-        }
-        
-        if (!hasReviewOnDate) break;
+      while (reviewDates.has(checkDate.toISOString())) {
         streak++;
         checkDate.setDate(checkDate.getDate() - 1);
       }
       
       setStreakDays(streak);
 
-      // Calculate weekly progress (last 7 days)
+      /**
+       * 5. 每週進度圖表
+       * 演算法：統計最近7天每天複習的卡片數量
+       * 資料結構：[6天前, 5天前, ..., 昨天, 今天]
+       * 計算方式：對每一天，計算 last_reviewed_at 在該天的卡片數量
+       * 優化：使用 Map 來儲存每天的計數
+       */
+      const dailyCounts = new Map<string, number>();
+      
+      for (const { stats } of allCardsWithStats) {
+        if (stats?.last_reviewed_at) {
+          const reviewDate = new Date(stats.last_reviewed_at);
+          reviewDate.setHours(0, 0, 0, 0);
+          const dateKey = reviewDate.toISOString();
+          dailyCounts.set(dateKey, (dailyCounts.get(dateKey) || 0) + 1);
+        }
+      }
+      
       const progressData: number[] = [];
       for (let i = 6; i >= 0; i--) {
         const checkDate = new Date();
         checkDate.setDate(checkDate.getDate() - i);
         checkDate.setHours(0, 0, 0, 0);
-        
-        let dayCount = 0;
-        for (const wordbook of allWordbooks) {
-          const cards = await db.getCardsByWordbook(wordbook.id);
-          for (const card of cards) {
-            const stats = await db.getCardStats(card.id);
-            if (stats?.last_reviewed_at) {
-              const reviewDate = new Date(stats.last_reviewed_at);
-              reviewDate.setHours(0, 0, 0, 0);
-              if (reviewDate.getTime() === checkDate.getTime()) {
-                dayCount++;
-              }
-            }
-          }
-        }
-        progressData.push(dayCount);
+        const dateKey = checkDate.toISOString();
+        progressData.push(dailyCounts.get(dateKey) || 0);
       }
       setWeeklyProgress(progressData);
 
-      // Calculate progress by level
+      /**
+       * 6. 各程度進度
+       * 演算法：按難度分級統計掌握情況
+       * 分級規則：
+       * - Advanced: TOEFL/IELTS/GRE
+       * - Intermediate: 大學/高中
+       * - Beginner: 其他
+       * 
+       * 掌握標準：right_count > wrong_count
+       * 百分比 = (已掌握數量 / 總數量) × 100%
+       * 
+       * 時間篩選：如果選擇了時間範圍，只統計該時間範圍內有複習記錄的卡片
+       */
       const levelStats: Record<string, { current: number; total: number }> = {
         Beginner: { current: 0, total: 0 },
         Intermediate: { current: 0, total: 0 },
         Advanced: { current: 0, total: 0 },
       };
 
-      for (const wordbook of allWordbooks) {
-        const cards = await db.getCardsByWordbook(wordbook.id);
-        for (const card of cards) {
-          const level = wordbook.level || "Beginner";
-          const normalizedLevel = level.includes("TOEFL") || level.includes("IELTS") || level.includes("GRE")
-            ? "Advanced" 
-            : level.includes("大學") || level.includes("高中")
-            ? "Intermediate" 
-            : "Beginner";
+      for (const { card, stats, wordbook } of allCardsWithStats) {
+        // 時間範圍篩選
+        if (startDate && stats?.last_reviewed_at) {
+          const reviewDate = new Date(stats.last_reviewed_at);
+          if (reviewDate < startDate) continue;
+        }
+        
+        // 如果沒有統計數據且有時間限制，跳過此卡片
+        if (startDate && !stats) continue;
+        
+        const level = wordbook.level || "Beginner";
+        const normalizedLevel = level.includes("TOEFL") || level.includes("IELTS") || level.includes("GRE")
+          ? "Advanced" 
+          : level.includes("大學") || level.includes("高中")
+          ? "Intermediate" 
+          : "Beginner";
 
-          if (levelStats[normalizedLevel]) {
-            levelStats[normalizedLevel].total++;
-            const stats = await db.getCardStats(card.id);
-            if (stats && stats.right_count > stats.wrong_count) {
-              levelStats[normalizedLevel].current++;
-            }
+        if (levelStats[normalizedLevel]) {
+          levelStats[normalizedLevel].total++;
+          
+          // 判斷是否已掌握：正確次數 > 錯誤次數
+          if (stats && stats.right_count > stats.wrong_count) {
+            levelStats[normalizedLevel].current++;
           }
         }
       }
@@ -201,7 +271,7 @@ const Statistics = () => {
         percentage: data.total > 0 ? Math.round((data.current / data.total) * 100) : 0,
         color: level === "Beginner" ? "bg-teal" : level === "Intermediate" ? "bg-yellow" : "bg-destructive",
       }));
-      setProgressByLevel(levelProgress);
+      setProgressByLevel(levelProgress.filter(l => l.total > 0)); // 只顯示有資料的級別
       
     } catch (error) {
       console.error("Failed to load statistics:", error);
