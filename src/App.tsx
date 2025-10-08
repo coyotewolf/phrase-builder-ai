@@ -12,6 +12,7 @@ import Statistics from "./pages/Statistics";
 import TodayReviewed from "./pages/TodayReviewed";
 import StreakHistory from "./pages/StreakHistory";
 import AccuracyDetails from "./pages/AccuracyDetails";
+import AllErrorCards from "./pages/AllErrorCards";
 import Settings from "./pages/Settings";
 import Review from "./pages/Review";
 import NotFound from "./pages/NotFound";
@@ -33,6 +34,7 @@ const App = () => (
           <Route path="/statistics/today" element={<TodayReviewed />} />
           <Route path="/statistics/streak" element={<StreakHistory />} />
           <Route path="/statistics/accuracy" element={<AccuracyDetails />} />
+          <Route path="/statistics/error-cards" element={<AllErrorCards />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/review" element={<Review />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

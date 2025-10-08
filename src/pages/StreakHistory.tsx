@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Flame, Calendar, TrendingUp } from "lucide-react";
+import { ArrowLeft, Flame, Calendar, TrendingUp, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,17 +22,19 @@ const StreakHistory = () => {
   const [longestStreak, setLongestStreak] = useState(0);
   const [weeklyData, setWeeklyData] = useState<DayRecord[][]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [reviewDatesMap, setReviewDatesMap] = useState<Map<string, number>>(new Map());
 
   useEffect(() => {
     loadStreakHistory();
-  }, []); // Refresh on mount to include today's data
+  }, [currentMonth]); // Reload when month changes
 
   const loadStreakHistory = async () => {
     try {
       setLoading(true);
 
       const allWordbooks = await db.getAllWordbooks();
-      const reviewDatesMap = new Map<string, number>();
+      const reviewDatesMapTemp = new Map<string, number>();
 
       // Collect all review dates with counts
       for (const wordbook of allWordbooks) {
@@ -46,17 +48,19 @@ const StreakHistory = () => {
             reviewDate.setHours(0, 0, 0, 0);
             const dateKey = reviewDate.toISOString();
             
-            reviewDatesMap.set(dateKey, (reviewDatesMap.get(dateKey) || 0) + 1);
+            reviewDatesMapTemp.set(dateKey, (reviewDatesMapTemp.get(dateKey) || 0) + 1);
           }
         }
       }
 
-      // Calculate current streak
+      setReviewDatesMap(reviewDatesMapTemp);
+
+      // Calculate current streak (only once, not dependent on currentMonth)
       let currentStreak = 0;
       const checkDate = new Date();
       checkDate.setHours(0, 0, 0, 0);
       
-      while (reviewDatesMap.has(checkDate.toISOString())) {
+      while (reviewDatesMapTemp.has(checkDate.toISOString())) {
         currentStreak++;
         checkDate.setDate(checkDate.getDate() - 1);
       }
@@ -64,10 +68,10 @@ const StreakHistory = () => {
       setStreakDays(currentStreak);
 
       // Calculate total days with reviews
-      setTotalDays(reviewDatesMap.size);
+      setTotalDays(reviewDatesMapTemp.size);
 
       // Calculate longest streak
-      const sortedDates = Array.from(reviewDatesMap.keys())
+      const sortedDates = Array.from(reviewDatesMapTemp.keys())
         .map(d => new Date(d))
         .sort((a, b) => a.getTime() - b.getTime());
       
@@ -92,46 +96,9 @@ const StreakHistory = () => {
       maxStreak = Math.max(maxStreak, tempStreak);
       setLongestStreak(maxStreak);
 
-      // Generate calendar data for last 8 weeks
-      const weeks: DayRecord[][] = [];
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      // Generate calendar data for current month
+      generateMonthCalendar(currentMonth, reviewDatesMapTemp);
       
-      // Start from 8 weeks ago
-      const startDate = new Date(today);
-      startDate.setDate(startDate.getDate() - 56); // 8 weeks
-      
-      // Adjust to start from Sunday
-      const dayOfWeek = startDate.getDay();
-      startDate.setDate(startDate.getDate() - dayOfWeek);
-
-      for (let week = 0; week < 8; week++) {
-        const weekData: DayRecord[] = [];
-        
-        for (let day = 0; day < 7; day++) {
-          const currentDate = new Date(startDate);
-          currentDate.setDate(currentDate.getDate() + (week * 7) + day);
-          currentDate.setHours(0, 0, 0, 0);
-          
-          const dateKey = currentDate.toISOString();
-          const reviewCount = reviewDatesMap.get(dateKey) || 0;
-          const isToday = currentDate.getTime() === today.getTime();
-          const isFuture = currentDate.getTime() > today.getTime();
-          
-          weekData.push({
-            date: currentDate,
-            dateString: dateKey,
-            reviewCount,
-            hasReview: reviewCount > 0,
-            isToday,
-            isFuture
-          });
-        }
-        
-        weeks.push(weekData);
-      }
-
-      setWeeklyData(weeks);
       setLoading(false);
     } catch (error) {
       console.error("Failed to load streak history:", error);
@@ -139,7 +106,93 @@ const StreakHistory = () => {
     }
   };
 
-  const getDayColor = (record: DayRecord) => {
+  const generateMonthCalendar = (monthDate: Date, reviewMap: Map<string, number>) => {
+    const weeks: DayRecord[][] = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Get first day of the month
+    const firstDay = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+    firstDay.setHours(0, 0, 0, 0);
+    
+    // Get last day of the month
+    const lastDay = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
+    lastDay.setHours(0, 0, 0, 0);
+    
+    // Adjust to start from Sunday
+    const startDate = new Date(firstDay);
+    const dayOfWeek = startDate.getDay();
+    startDate.setDate(startDate.getDate() - dayOfWeek);
+
+    // Generate weeks until we cover the whole month
+    let currentDate = new Date(startDate);
+    
+    while (currentDate <= lastDay || weeks.length === 0 || weeks[weeks.length - 1].length < 7) {
+      const weekData: DayRecord[] = [];
+      
+      for (let day = 0; day < 7; day++) {
+        const dateKey = currentDate.toISOString();
+        const reviewCount = reviewMap.get(dateKey) || 0;
+        const isToday = currentDate.getTime() === today.getTime();
+        const isFuture = currentDate.getTime() > today.getTime();
+        const isCurrentMonth = currentDate.getMonth() === monthDate.getMonth();
+        
+        weekData.push({
+          date: new Date(currentDate),
+          dateString: dateKey,
+          reviewCount,
+          hasReview: reviewCount > 0,
+          isToday,
+          isFuture
+        });
+        
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+      
+      weeks.push(weekData);
+      
+      // Stop if we've passed the last day and completed the week
+      if (currentDate > lastDay && weekData[6].date > lastDay) {
+        break;
+      }
+    }
+
+    setWeeklyData(weeks);
+  };
+
+  const handlePreviousMonth = () => {
+    const newMonth = new Date(currentMonth);
+    newMonth.setMonth(newMonth.getMonth() - 1);
+    setCurrentMonth(newMonth);
+    generateMonthCalendar(newMonth, reviewDatesMap);
+  };
+
+  const handleNextMonth = () => {
+    const today = new Date();
+    const nextMonth = new Date(currentMonth);
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    
+    // Don't go beyond current month
+    if (nextMonth <= today) {
+      setCurrentMonth(nextMonth);
+      generateMonthCalendar(nextMonth, reviewDatesMap);
+    }
+  };
+
+  const handleToday = () => {
+    const today = new Date();
+    setCurrentMonth(today);
+    generateMonthCalendar(today, reviewDatesMap);
+  };
+
+  const isCurrentMonth = () => {
+    const today = new Date();
+    return currentMonth.getFullYear() === today.getFullYear() && 
+           currentMonth.getMonth() === today.getMonth();
+  };
+
+  const getDayColor = (record: DayRecord, isCurrentMonth: boolean) => {
+    if (!isCurrentMonth) return "bg-muted/20";
     if (record.isFuture) return "bg-muted/30";
     if (!record.hasReview) return "bg-muted/50";
     if (record.reviewCount >= 50) return "bg-teal";
@@ -222,7 +275,38 @@ const StreakHistory = () => {
         <Card className="p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">學習日曆</h2>
-            <Badge variant="secondary" className="text-xs">最近 8 週</Badge>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handlePreviousMonth}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Badge variant="secondary" className="text-xs">
+                {currentMonth.getFullYear()}年 {currentMonth.getMonth() + 1}月
+              </Badge>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleNextMonth}
+                disabled={isCurrentMonth()}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              {!isCurrentMonth() && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleToday}
+                  className="text-xs"
+                >
+                  今天
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Weekday labels */}
@@ -239,24 +323,32 @@ const StreakHistory = () => {
           <div className="space-y-2">
             {weeklyData.map((week, weekIdx) => {
               const firstDayOfWeek = week[0].date;
-              const monthDay = `${firstDayOfWeek.getMonth() + 1}/${firstDayOfWeek.getDate()}`;
+              const weekNumber = Math.ceil(firstDayOfWeek.getDate() / 7);
               
               return (
                 <div key={weekIdx} className="flex gap-2">
                   <div className="w-12 text-xs text-muted-foreground flex items-center justify-end pr-1">
-                    {weekIdx % 2 === 0 ? monthDay : ""}
+                    {weekIdx === 0 ? `第${weekNumber}週` : ""}
                   </div>
-                  {week.map((day, dayIdx) => (
-                    <div
-                      key={dayIdx}
-                      className={`flex-1 aspect-square rounded ${getDayColor(day)} transition-all hover:scale-110 cursor-pointer relative group`}
-                      title={`${day.date.toLocaleDateString('zh-TW')} - ${day.reviewCount} 個單字`}
-                    >
-                      {day.isToday && (
-                        <div className="absolute inset-0 rounded border-2 border-yellow" />
-                      )}
-                    </div>
-                  ))}
+                  {week.map((day, dayIdx) => {
+                    const isCurrentMonthDay = day.date.getMonth() === currentMonth.getMonth();
+                    return (
+                      <div
+                        key={dayIdx}
+                        className={`flex-1 aspect-square rounded ${getDayColor(day, isCurrentMonthDay)} transition-all hover:scale-110 cursor-pointer relative group`}
+                        title={`${day.date.toLocaleDateString('zh-TW')} - ${day.reviewCount} 個單字`}
+                      >
+                        {day.isToday && (
+                          <div className="absolute inset-0 rounded border-2 border-yellow" />
+                        )}
+                        {!isCurrentMonthDay && (
+                          <div className="absolute inset-0 flex items-center justify-center text-[8px] text-muted-foreground/50">
+                            {day.date.getDate()}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               );
             })}

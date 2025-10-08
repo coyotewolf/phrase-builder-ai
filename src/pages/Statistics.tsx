@@ -526,7 +526,7 @@ const Statistics = () => {
         <Card 
           id="error-cards"
           className="p-6 space-y-4 cursor-pointer hover:bg-muted/50 transition-colors"
-          onClick={() => navigate('/wordbooks')}
+          onClick={() => navigate('/statistics/error-cards')}
         >
           <h2 className="text-lg font-semibold">需要複習的單字</h2>
           {isLoading ? (
