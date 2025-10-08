@@ -444,20 +444,8 @@ const Review = () => {
         </p>
       )}
 
-      {/* Manual action buttons (alternative to swipe) */}
-      <div className="fixed bottom-6 left-0 right-0 px-4 flex justify-center gap-4 pb-safe z-10">
-        <Button
-          variant="destructive"
-          size="lg"
-          className="rounded-full w-16 h-16"
-          onClick={() => {
-            setIsAnimating(true);
-            setExitX(-1000);
-            setTimeout(() => handleAnswer(false), 300);
-          }}
-        >
-          <span className="text-2xl">✗</span>
-        </Button>
+      {/* Detail button */}
+      <div className="fixed bottom-6 left-0 right-0 px-4 flex justify-center pb-safe z-10">
         <Button
           variant="outline"
           size="lg"
@@ -466,18 +454,6 @@ const Review = () => {
         >
           <ChevronUp className="h-4 w-4 mr-2" />
           詳細
-        </Button>
-        <Button
-          variant="default"
-          size="lg"
-          className="rounded-full w-16 h-16 bg-success hover:bg-success/90"
-          onClick={() => {
-            setIsAnimating(true);
-            setExitX(1000);
-            setTimeout(() => handleAnswer(true), 300);
-          }}
-        >
-          <span className="text-2xl">✓</span>
         </Button>
       </div>
 
