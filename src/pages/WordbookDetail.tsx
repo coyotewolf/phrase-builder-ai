@@ -20,6 +20,7 @@ import { generateWordDetails } from "@/lib/gemini-api";
 import { parseCSV } from "@/lib/csv";
 import { toast } from "sonner";
 import { ApiKeyDialog } from "@/components/ApiKeyDialog";
+import { AddCardDialog } from "@/components/AddCardDialog";
 import { EditCardDialog } from "@/components/EditCardDialog";
 import { EditWordbookDialog } from "@/components/EditWordbookDialog";
 import { RegenerateCardsDialog } from "@/components/RegenerateCardsDialog";
@@ -37,25 +38,6 @@ const WordbookDetail = () => {
   const [selectedCard, setSelectedCard] = useState<VocabCard | null>(null);
   const [pendingLevel, setPendingLevel] = useState<string | null>(null);
   const [isRegenerating, setIsRegenerating] = useState(false);
-  const [newWord, setNewWord] = useState("");
-  const [newPhonetic, setNewPhonetic] = useState("");
-  const [newMeanings, setNewMeanings] = useState<Array<{
-    part_of_speech: string;
-    meaning_zh: string;
-    meaning_en: string;
-    synonyms: string[];
-    antonyms: string[];
-    examples: string[];
-  }>>([{
-    part_of_speech: "",
-    meaning_zh: "",
-    meaning_en: "",
-    synonyms: [],
-    antonyms: [],
-    examples: [],
-  }]);
-  const [newNotes, setNewNotes] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
@@ -96,88 +78,37 @@ const WordbookDetail = () => {
     }
   };
 
-  const handleAddCard = async () => {
-    if (!newWord.trim() || !id) {
-      toast.error("請輸入單字");
-      return;
-    }
+  const handleAddCard = async (cardData: {
+    headword: string;
+    phonetic: string;
+    meanings: Array<{
+      part_of_speech: string;
+      meaning_zh: string;
+      meaning_en: string;
+      synonyms: string[];
+      antonyms: string[];
+      examples: string[];
+    }>;
+    notes: string;
+  }) => {
+    if (!id) return;
 
     try {
       await db.createCard({
         wordbook_id: id,
-        headword: newWord,
-        phonetic: newPhonetic || undefined,
-        meanings: newMeanings,
-        notes: newNotes || undefined,
+        headword: cardData.headword,
+        phonetic: cardData.phonetic || undefined,
+        meanings: cardData.meanings,
+        notes: cardData.notes || undefined,
         star: false,
         tags: [],
       });
       
       toast.success("單字卡已新增");
-      setIsAddDialogOpen(false);
-      setNewWord("");
-      setNewPhonetic("");
-      setNewMeanings([{
-        part_of_speech: "",
-        meaning_zh: "",
-        meaning_en: "",
-        synonyms: [],
-        antonyms: [],
-        examples: [],
-      }]);
-      setNewNotes("");
       loadData();
     } catch (error) {
       console.error("Failed to create card:", error);
       toast.error("新增單字卡失敗");
-    }
-  };
-
-  const handleGenerateDetails = async () => {
-    if (!newWord.trim()) {
-      toast.error("請先輸入單字");
-      return;
-    }
-
-    const settings = await db.getUserSettings();
-    if (!settings.gemini_api_key) {
-      toast.error("請先設定 Gemini API 密鑰");
-      setIsApiKeyDialogOpen(true);
-      return;
-    }
-
-    try {
-      setIsGenerating(true);
-      const level = wordbook?.level || 'TOEFL';
-      const details = await generateWordDetails(
-        { 
-          words: [newWord], 
-          level,
-          limits: { synonyms: 10, antonyms: 10, examples: 5 }
-        },
-        settings.gemini_api_key
-      );
-      
-      if (details && details.length > 0) {
-        const detail = details[0];
-        setNewPhonetic(detail.ipa || "");
-        setNewMeanings(detail.meanings.map(m => ({
-          part_of_speech: m.part_of_speech,
-          meaning_zh: m.definition_zh || "",
-          meaning_en: m.definition_en || "",
-          synonyms: m.synonyms || [],
-          antonyms: m.antonyms || [],
-          examples: m.examples || [],
-        })));
-        setNewNotes(detail.notes || "");
-      }
-      
-      toast.success("已生成單字詳情");
-    } catch (error) {
-      console.error("Failed to generate details:", error);
-      toast.error("生成失敗，請檢查 API 密鑰");
-    } finally {
-      setIsGenerating(false);
     }
   };
 
@@ -1047,74 +978,12 @@ const WordbookDetail = () => {
           </>
         )}
 
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>新增單字卡</DialogTitle>
-              <DialogDescription>
-                輸入單字，可以使用 AI 自動生成詳情
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="word">單字 *</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="word"
-                      placeholder="例如：test"
-                      value={newWord}
-                      onChange={(e) => setNewWord(e.target.value)}
-                    />
-                    <Button
-                      variant="outline"
-                      onClick={handleGenerateDetails}
-                      disabled={isGenerating || !newWord.trim()}
-                      title="使用 AI 生成詳情（支持多詞性）"
-                    >
-                      <Sparkles className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phonetic">音標 / IPA</Label>
-                  <Input
-                    id="phonetic"
-                    value={newPhonetic}
-                    onChange={(e) => setNewPhonetic(e.target.value)}
-                    placeholder="/test/"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  AI 會自動識別多詞性並分別生成釋義
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notes">備註</Label>
-                <Textarea
-                  id="notes"
-                  value={newNotes}
-                  onChange={(e) => setNewNotes(e.target.value)}
-                  rows={3}
-                  placeholder="額外的筆記或使用提示"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setIsAddDialogOpen(false)}
-              >
-                取消
-              </Button>
-              <Button onClick={handleAddCard}>新增</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <AddCardDialog
+          open={isAddDialogOpen}
+          onOpenChange={setIsAddDialogOpen}
+          onAdd={handleAddCard}
+          wordbookLevel={wordbook?.level}
+        />
 
         <ApiKeyDialog
           open={isApiKeyDialogOpen}
