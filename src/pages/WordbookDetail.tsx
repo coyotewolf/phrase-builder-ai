@@ -31,7 +31,14 @@ const WordbookDetail = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedCard, setSelectedCard] = useState<VocabCard | null>(null);
   const [newWord, setNewWord] = useState("");
-  const [newDefinition, setNewDefinition] = useState("");
+  const [newPhonetic, setNewPhonetic] = useState("");
+  const [newPartOfSpeech, setNewPartOfSpeech] = useState("");
+  const [newMeaningZh, setNewMeaningZh] = useState("");
+  const [newMeaningEn, setNewMeaningEn] = useState("");
+  const [newNotes, setNewNotes] = useState("");
+  const [newSynonyms, setNewSynonyms] = useState<string[]>([]);
+  const [newAntonyms, setNewAntonyms] = useState<string[]>([]);
+  const [newExamples, setNewExamples] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -69,15 +76,32 @@ const WordbookDetail = () => {
       await db.createCard({
         wordbook_id: id,
         headword: newWord,
-        meaning_zh: newDefinition || undefined,
+        phonetic: newPhonetic || undefined,
+        part_of_speech: newPartOfSpeech || undefined,
+        meaning_zh: newMeaningZh || undefined,
+        meaning_en: newMeaningEn || undefined,
+        notes: newNotes || undefined,
         star: false,
         tags: [],
+        detail: {
+          synonyms: newSynonyms,
+          antonyms: newAntonyms,
+          examples: newExamples,
+          ipa: newPhonetic || undefined,
+        },
       });
       
       toast.success("單字卡已新增");
       setIsAddDialogOpen(false);
       setNewWord("");
-      setNewDefinition("");
+      setNewPhonetic("");
+      setNewPartOfSpeech("");
+      setNewMeaningZh("");
+      setNewMeaningEn("");
+      setNewNotes("");
+      setNewSynonyms([]);
+      setNewAntonyms([]);
+      setNewExamples([]);
       loadData();
     } catch (error) {
       console.error("Failed to create card:", error);
@@ -106,7 +130,14 @@ const WordbookDetail = () => {
       );
       
       if (details && details.length > 0) {
-        setNewDefinition(details[0].definition_en || "");
+        const detail = details[0];
+        setNewPhonetic(detail.ipa || "");
+        setNewPartOfSpeech(detail.part_of_speech || "");
+        setNewMeaningEn(detail.definition_en || "");
+        setNewSynonyms(detail.synonyms || []);
+        setNewAntonyms(detail.antonyms || []);
+        setNewExamples(detail.examples || []);
+        setNewNotes(detail.notes || "");
       }
       
       toast.success("已生成單字詳情");
@@ -295,40 +326,183 @@ const WordbookDetail = () => {
         )}
 
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogContent>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>新增單字卡</DialogTitle>
               <DialogDescription>
                 輸入單字，可以使用 AI 自動生成詳情
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="word">單字</Label>
-                <div className="flex gap-2">
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="word">單字 *</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="word"
+                      placeholder="例如：rescind"
+                      value={newWord}
+                      onChange={(e) => setNewWord(e.target.value)}
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={handleGenerateDetails}
+                      disabled={isGenerating || !newWord.trim()}
+                      title="使用 AI 生成詳情"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phonetic">音標 / IPA</Label>
                   <Input
-                    id="word"
-                    placeholder="例如：abandon"
-                    value={newWord}
-                    onChange={(e) => setNewWord(e.target.value)}
+                    id="phonetic"
+                    value={newPhonetic}
+                    onChange={(e) => setNewPhonetic(e.target.value)}
+                    placeholder="/rɪˈsɪnd/"
                   />
-                  <Button
-                    variant="outline"
-                    onClick={handleGenerateDetails}
-                    disabled={isGenerating || !newWord.trim()}
-                  >
-                    <Sparkles className="h-4 w-4" />
-                  </Button>
                 </div>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="definition">釋義</Label>
+
+              <div className="space-y-2">
+                <Label htmlFor="pos">詞性</Label>
+                <Input
+                  id="pos"
+                  value={newPartOfSpeech}
+                  onChange={(e) => setNewPartOfSpeech(e.target.value)}
+                  placeholder="noun, verb, adjective..."
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="meaning-zh">中文釋義</Label>
                 <Textarea
-                  id="definition"
-                  placeholder="單字的釋義和說明"
-                  value={newDefinition}
-                  onChange={(e) => setNewDefinition(e.target.value)}
-                  rows={4}
+                  id="meaning-zh"
+                  value={newMeaningZh}
+                  onChange={(e) => setNewMeaningZh(e.target.value)}
+                  rows={2}
+                  placeholder="撤銷；廢除"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="meaning-en">英文定義</Label>
+                <Textarea
+                  id="meaning-en"
+                  value={newMeaningEn}
+                  onChange={(e) => setNewMeaningEn(e.target.value)}
+                  rows={2}
+                  placeholder="to cancel or repeal officially"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>同義詞</Label>
+                <div className="flex gap-2 flex-wrap mb-2">
+                  {newSynonyms.map((syn, idx) => (
+                    <span key={idx} className="inline-flex items-center gap-1 px-2 py-1 bg-secondary text-secondary-foreground rounded-md text-sm">
+                      {syn}
+                      <button
+                        type="button"
+                        onClick={() => setNewSynonyms(newSynonyms.filter((_, i) => i !== idx))}
+                        className="hover:text-destructive"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="輸入同義詞後按 Enter"
+                    onKeyPress={(e) => {
+                      if (e.key === "Enter") {
+                        const input = e.currentTarget;
+                        if (input.value.trim()) {
+                          setNewSynonyms([...newSynonyms, input.value.trim()]);
+                          input.value = "";
+                        }
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>反義詞</Label>
+                <div className="flex gap-2 flex-wrap mb-2">
+                  {newAntonyms.map((ant, idx) => (
+                    <span key={idx} className="inline-flex items-center gap-1 px-2 py-1 bg-secondary text-secondary-foreground rounded-md text-sm">
+                      {ant}
+                      <button
+                        type="button"
+                        onClick={() => setNewAntonyms(newAntonyms.filter((_, i) => i !== idx))}
+                        className="hover:text-destructive"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="輸入反義詞後按 Enter"
+                    onKeyPress={(e) => {
+                      if (e.key === "Enter") {
+                        const input = e.currentTarget;
+                        if (input.value.trim()) {
+                          setNewAntonyms([...newAntonyms, input.value.trim()]);
+                          input.value = "";
+                        }
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>例句</Label>
+                <div className="space-y-2 mb-2">
+                  {newExamples.map((ex, idx) => (
+                    <div key={idx} className="flex items-start gap-2 p-2 bg-muted rounded">
+                      <p className="flex-1 text-sm">{ex}</p>
+                      <button
+                        type="button"
+                        onClick={() => setNewExamples(newExamples.filter((_, i) => i !== idx))}
+                        className="hover:text-destructive"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Textarea
+                    placeholder="輸入例句"
+                    rows={2}
+                    onKeyPress={(e) => {
+                      if (e.key === "Enter" && e.ctrlKey) {
+                        const input = e.currentTarget;
+                        if (input.value.trim()) {
+                          setNewExamples([...newExamples, input.value.trim()]);
+                          input.value = "";
+                        }
+                      }
+                    }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">按 Ctrl+Enter 新增例句</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="notes">備註</Label>
+                <Textarea
+                  id="notes"
+                  value={newNotes}
+                  onChange={(e) => setNewNotes(e.target.value)}
+                  rows={3}
+                  placeholder="額外的筆記或使用提示"
                 />
               </div>
             </div>
