@@ -172,38 +172,32 @@ const Home = () => {
       </div>
 
       <div className="px-4 sm:px-6 space-y-6">
-        {/* Greeting with Target Wordbook */}
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 space-y-2">
+        {/* Greeting */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold">{getGreeting()} 👋</h1>
-            <p className="text-muted-foreground">
-              今日進度：{todayCompleted}/{dailyGoal} 個單字
-            </p>
-            <div className="h-2 bg-muted rounded-full overflow-hidden">
-              <div
-                className="h-full bg-foreground transition-all duration-500"
-                style={{ width: `${progressPercentage}%` }}
-              />
-            </div>
+            
+            {/* Compact Wordbook Selector */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="flex items-center gap-1.5 text-xs h-8 px-3"
+              onClick={() => setShowWordbookSelector(!showWordbookSelector)}
+            >
+              <Target className="h-3.5 w-3.5" />
+              <span>{selectedWordbooks.length} 本書</span>
+            </Button>
           </div>
-
-          {/* Compact Wordbook Selector */}
-          <Card className="p-3 w-40 flex-shrink-0">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Target className="h-4 w-4 text-primary" />
-                <h3 className="text-xs font-semibold">目標</h3>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full text-xs h-8"
-                onClick={() => setShowWordbookSelector(!showWordbookSelector)}
-              >
-                {selectedWordbooks.length} 本書
-              </Button>
-            </div>
-          </Card>
+          
+          <p className="text-muted-foreground">
+            今日進度：{todayCompleted}/{dailyGoal} 個單字
+          </p>
+          <div className="h-2 bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full bg-foreground transition-all duration-500"
+              style={{ width: `${progressPercentage}%` }}
+            />
+          </div>
         </div>
 
         {/* Wordbook Selection Dialog */}
