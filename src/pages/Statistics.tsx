@@ -305,7 +305,7 @@ const Statistics = () => {
        * 6. 各程度進度
        * 演算法：按難度分級統計掌握情況
        * 分級規則（新）：
-       * - Beginner: 國小、國中、高中
+       * - Beginner: 國小、國中、高中、7000單
        * - Intermediate: 大學、TOEFL、IELTS
        * - Advanced: GRE、其他
        * 
@@ -332,7 +332,7 @@ const Statistics = () => {
         
         const level = wordbook.level || "Advanced";
         const normalizedLevel = 
-          level.includes("國小") || level.includes("國中") || level.includes("高中")
+          level.includes("國小") || level.includes("國中") || level.includes("高中") || level.includes("7000單")
             ? "Beginner"
           : level.includes("大學") || level.includes("TOEFL") || level.includes("IELTS")
             ? "Intermediate"
