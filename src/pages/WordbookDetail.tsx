@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Plus, ArrowLeft, Trash2, Upload, Sparkles, Edit, Settings, CheckSquare, X } from "lucide-react";
+import { Plus, ArrowLeft, Trash2, Upload, Sparkles, Edit, Settings, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -61,6 +62,7 @@ const WordbookDetail = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [isFilling, setIsFilling] = useState(false);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const LONG_PRESS_DURATION = 500; // 500ms for long press
 
   useEffect(() => {
     loadData();
@@ -373,19 +375,30 @@ const WordbookDetail = () => {
     }
   };
 
-  const handleCardLongPress = (cardId: string) => {
+  const enterSelectionMode = (cardId: string) => {
     setIsSelectionMode(true);
     setSelectedCardIds(new Set([cardId]));
   };
 
-  const handleCardTouchStart = (cardId: string, e?: React.TouchEvent | React.MouseEvent) => {
-    if (isSelectionMode) {
-      toggleCardSelection(cardId);
-      setIsDragging(true);
-    } else {
+  const cancelSelectionMode = () => {
+    setIsSelectionMode(false);
+    setSelectedCardIds(new Set());
+    setIsDragging(false);
+  };
+
+  const handleCardLongPress = (cardId: string) => {
+    if (!isSelectionMode) {
+      enterSelectionMode(cardId);
+    }
+  };
+
+  const handleCardTouchStart = (cardId: string) => {
+    if (!isSelectionMode) {
       longPressTimer.current = setTimeout(() => {
         handleCardLongPress(cardId);
-      }, 500);
+      }, LONG_PRESS_DURATION);
+    } else {
+      setIsDragging(true);
     }
   };
 
@@ -398,22 +411,16 @@ const WordbookDetail = () => {
   };
 
   const handleCardTouchMove = () => {
-    // Cancel long press if user is dragging
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
     }
   };
 
-  const addCardToSelection = (cardId: string) => {
-    setSelectedCardIds(prev => {
-      const newSet = new Set(prev);
-      newSet.add(cardId);
-      return newSet;
-    });
-  };
-
-  const toggleCardSelection = (cardId: string) => {
+  const toggleCardSelection = (cardId: string, e?: React.MouseEvent | React.TouchEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
     setSelectedCardIds(prev => {
       const newSet = new Set(prev);
       if (newSet.has(cardId)) {
@@ -423,6 +430,22 @@ const WordbookDetail = () => {
       }
       return newSet;
     });
+  };
+
+  const selectAllCards = () => {
+    setSelectedCardIds(new Set(cards.map(card => card.id)));
+  };
+
+  const deselectAllCards = () => {
+    setSelectedCardIds(new Set());
+  };
+
+  const handleSelectAll = () => {
+    if (selectedCardIds.size === cards.length) {
+      deselectAllCards();
+    } else {
+      selectAllCards();
+    }
   };
 
   const handleBatchDelete = async () => {
@@ -517,11 +540,6 @@ const WordbookDetail = () => {
     } finally {
       setIsRegenerating(false);
     }
-  };
-
-  const cancelSelectionMode = () => {
-    setIsSelectionMode(false);
-    setSelectedCardIds(new Set());
   };
 
   const handleDeleteCard = async (cardId: string) => {
@@ -659,30 +677,36 @@ const WordbookDetail = () => {
         ) : (
           <>
             {isSelectionMode && (
-              <div className="fixed top-20 left-0 right-0 z-20 bg-primary text-primary-foreground p-4 shadow-lg">
-                <div className="max-w-7xl mx-auto flex items-center justify-between">
-                  <div className="flex items-center gap-4">
+              <div className="sticky top-0 z-50 bg-gradient-to-b from-background via-background to-background/80 backdrop-blur-sm pb-4 mb-4">
+                <div className="flex items-center justify-between p-4 bg-card rounded-lg border border-primary/20 shadow-lg">
+                  <div className="flex items-center gap-3">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={cancelSelectionMode}
-                      className="text-primary-foreground hover:bg-primary-foreground/20"
+                      className="hover:bg-destructive/10"
                     >
-                      <X className="h-4 w-4 mr-2" />
+                      <X className="h-4 w-4 mr-1" />
                       取消
                     </Button>
-                    <span className="font-medium">
-                      已選擇 {selectedCardIds.size} 張卡片
+                    <Checkbox
+                      checked={selectedCardIds.size === cards.length && cards.length > 0}
+                      onCheckedChange={handleSelectAll}
+                      className="mr-2"
+                    />
+                    <span className="text-sm font-medium">
+                      已選擇 {selectedCardIds.size} / {cards.length} 張卡片
                     </span>
                   </div>
                   <div className="flex gap-2">
                     <Button
-                      variant="secondary"
+                      variant="outline"
                       size="sm"
                       onClick={handleBatchRegenerate}
                       disabled={selectedCardIds.size === 0}
+                      className="hover:bg-primary/10"
                     >
-                      <Sparkles className="h-4 w-4 mr-2" />
+                      <Sparkles className="h-4 w-4 mr-1" />
                       AI 重新生成
                     </Button>
                     <Button
@@ -691,11 +715,17 @@ const WordbookDetail = () => {
                       onClick={handleBatchDelete}
                       disabled={selectedCardIds.size === 0}
                     >
-                      <Trash2 className="h-4 w-4 mr-2" />
+                      <Trash2 className="h-4 w-4 mr-1" />
                       刪除
                     </Button>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {!isSelectionMode && cards.length > 0 && (
+              <div className="text-center text-sm text-muted-foreground mb-4 py-2 px-4 bg-muted/30 rounded-lg">
+                💡 長按字卡進入選擇模式，滑動選取多個字卡
               </div>
             )}
             
@@ -728,8 +758,8 @@ const WordbookDetail = () => {
                         const cardElement = element?.closest('[data-card-id]');
                         if (cardElement) {
                           const hoveredCardId = cardElement.getAttribute('data-card-id');
-                          if (hoveredCardId && hoveredCardId !== card.id) {
-                            addCardToSelection(hoveredCardId);
+                          if (hoveredCardId && !selectedCardIds.has(hoveredCardId)) {
+                            toggleCardSelection(hoveredCardId);
                           }
                         }
                       }
@@ -749,15 +779,22 @@ const WordbookDetail = () => {
                     }}
                     onMouseEnter={() => {
                       if (isSelectionMode && isDragging) {
-                        addCardToSelection(card.id);
+                        if (!selectedCardIds.has(card.id)) {
+                          toggleCardSelection(card.id);
+                        }
                       }
                     }}
                     data-card-id={card.id}
                   >
                     {isSelectionMode && (
-                      <div className="absolute top-4 left-4 z-10">
-                        <CheckSquare 
-                          className={`h-6 w-6 ${isSelected ? 'text-primary fill-primary' : 'text-muted-foreground'}`}
+                      <div 
+                        className="absolute top-4 left-4 z-10 cursor-pointer"
+                        onClick={(e) => toggleCardSelection(card.id, e)}
+                      >
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => toggleCardSelection(card.id)}
+                          className="h-5 w-5"
                         />
                       </div>
                     )}
