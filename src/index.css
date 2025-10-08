@@ -141,3 +141,10 @@ All colors MUST be HSL.
     @apply bg-background text-foreground dark;
   }
 }
+
+@layer utilities {
+  .backface-hidden {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+}
