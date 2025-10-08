@@ -432,7 +432,7 @@ const WordbookDetail = () => {
   const handleCardLongPress = (cardId: string) => {
     longPressedCardId.current = cardId;
     
-    // Prevent body scrolling when long press starts
+    // Ensure body scrolling is prevented
     document.body.style.overflow = 'hidden';
     document.body.style.touchAction = 'none';
     
@@ -487,6 +487,12 @@ const WordbookDetail = () => {
       };
     }
     
+    // In selection mode, immediately prevent scrolling to prepare for potential drag
+    if (isSelectionMode && 'touches' in e) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+    }
+    
     // Always start long press timer
     longPressTimer.current = setTimeout(() => {
       handleCardLongPress(cardId);
@@ -512,8 +518,13 @@ const WordbookDetail = () => {
   };
 
   const handleCardTouchMove = (e: React.TouchEvent) => {
-    // Only clear long press timer if moved beyond threshold
-    if (longPressTimer.current && touchStartPos.current) {
+    // In selection mode with active timer, prevent scrolling immediately
+    if (isSelectionMode && longPressTimer.current) {
+      e.preventDefault();
+    }
+    
+    // Only clear long press timer if moved beyond threshold AND not in selection mode
+    if (longPressTimer.current && touchStartPos.current && !isSelectionMode) {
       const touch = e.touches[0];
       const deltaX = Math.abs(touch.clientX - touchStartPos.current.x);
       const deltaY = Math.abs(touch.clientY - touchStartPos.current.y);
