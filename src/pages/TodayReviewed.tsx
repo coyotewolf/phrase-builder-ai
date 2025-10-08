@@ -1,0 +1,230 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft, CheckCircle, XCircle, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { db, Card as VocabCard } from "@/lib/db";
+import { calculateErrorRate } from "@/lib/srs";
+
+interface ReviewedCardData {
+  card: VocabCard;
+  correctCount: number;
+  wrongCount: number;
+  lastReviewedAt: string;
+  errorRate: number;
+}
+
+const TodayReviewed = () => {
+  const navigate = useNavigate();
+  const [reviewedCards, setReviewedCards] = useState<ReviewedCardData[]>([]);
+  const [totalReviewed, setTotalReviewed] = useState(0);
+  const [correctCount, setCorrectCount] = useState(0);
+  const [wrongCount, setWrongCount] = useState(0);
+  const [dailyGoal, setDailyGoal] = useState(50);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadTodayReviewed();
+  }, []);
+
+  const loadTodayReviewed = async () => {
+    try {
+      setLoading(true);
+      
+      const settings = await db.getUserSettings();
+      setDailyGoal(settings.daily_goal);
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const allWordbooks = await db.getAllWordbooks();
+      const reviewedCardsData: ReviewedCardData[] = [];
+      let totalCorrect = 0;
+      let totalWrong = 0;
+
+      for (const wordbook of allWordbooks) {
+        const cards = await db.getCardsByWordbook(wordbook.id);
+        
+        for (const card of cards) {
+          const stats = await db.getCardStats(card.id);
+          
+          if (stats?.last_reviewed_at) {
+            const reviewDate = new Date(stats.last_reviewed_at);
+            reviewDate.setHours(0, 0, 0, 0);
+            
+            if (reviewDate.getTime() === today.getTime()) {
+              const errorRate = calculateErrorRate(stats.wrong_count, stats.shown_count);
+              
+              reviewedCardsData.push({
+                card,
+                correctCount: stats.right_count,
+                wrongCount: stats.wrong_count,
+                lastReviewedAt: stats.last_reviewed_at,
+                errorRate
+              });
+
+              totalCorrect += stats.right_count;
+              totalWrong += stats.wrong_count;
+            }
+          }
+        }
+      }
+
+      // Sort by last reviewed time (most recent first)
+      reviewedCardsData.sort((a, b) => 
+        new Date(b.lastReviewedAt).getTime() - new Date(a.lastReviewedAt).getTime()
+      );
+
+      setReviewedCards(reviewedCardsData);
+      setTotalReviewed(reviewedCardsData.length);
+      setCorrectCount(totalCorrect);
+      setWrongCount(totalWrong);
+      setLoading(false);
+    } catch (error) {
+      console.error("Failed to load today's reviewed cards:", error);
+      setLoading(false);
+    }
+  };
+
+  const progressPercentage = dailyGoal > 0 ? Math.min((totalReviewed / dailyGoal) * 100, 100) : 0;
+  const accuracyRate = totalReviewed > 0 ? Math.round((correctCount / (correctCount + wrongCount)) * 100) : 0;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <p className="text-muted-foreground">載入中...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background pb-6">
+      {/* Header */}
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+        <div className="flex items-center justify-between p-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/statistics")}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-xl font-bold">今日複習</h1>
+          <div className="w-10" />
+        </div>
+      </div>
+
+      <div className="p-4 space-y-6">
+        {/* Stats Summary */}
+        <Card className="p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold">今日進度</h2>
+            <Badge variant={progressPercentage >= 100 ? "default" : "secondary"} className="text-lg px-3 py-1">
+              {totalReviewed} / {dailyGoal}
+            </Badge>
+          </div>
+          
+          <Progress value={progressPercentage} className="h-3" />
+          
+          <div className="grid grid-cols-3 gap-4 pt-2">
+            <div className="text-center space-y-1">
+              <div className="flex items-center justify-center">
+                <CheckCircle className="h-5 w-5 text-success" />
+              </div>
+              <p className="text-2xl font-bold text-success">{correctCount}</p>
+              <p className="text-xs text-muted-foreground">正確</p>
+            </div>
+            
+            <div className="text-center space-y-1">
+              <div className="flex items-center justify-center">
+                <XCircle className="h-5 w-5 text-destructive" />
+              </div>
+              <p className="text-2xl font-bold text-destructive">{wrongCount}</p>
+              <p className="text-xs text-muted-foreground">錯誤</p>
+            </div>
+            
+            <div className="text-center space-y-1">
+              <div className="flex items-center justify-center">
+                <Clock className="h-5 w-5 text-primary" />
+              </div>
+              <p className="text-2xl font-bold">{accuracyRate}%</p>
+              <p className="text-xs text-muted-foreground">準確率</p>
+            </div>
+          </div>
+        </Card>
+
+        {/* Reviewed Cards List */}
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold">複習記錄</h2>
+          
+          {reviewedCards.length === 0 ? (
+            <Card className="p-8 text-center">
+              <p className="text-muted-foreground">今天還沒有複習記錄</p>
+            </Card>
+          ) : (
+            reviewedCards.map(({ card, correctCount, wrongCount, lastReviewedAt, errorRate }) => {
+              const reviewTime = new Date(lastReviewedAt);
+              const timeString = reviewTime.toLocaleTimeString('zh-TW', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+              });
+              
+              return (
+                <Card 
+                  key={card.id} 
+                  className="p-4 hover:bg-muted/50 transition-colors cursor-pointer"
+                  onClick={() => navigate(`/wordbooks/${card.wordbook_id}`)}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 space-y-1">
+                      <h3 className="text-lg font-semibold">{card.headword}</h3>
+                      {card.meanings && card.meanings.length > 0 && (
+                        <p className="text-sm text-muted-foreground line-clamp-1">
+                          {card.meanings[0].meaning_zh || card.meanings[0].meaning_en}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Clock className="h-3 w-3" />
+                        <span>{timeString}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-col items-end gap-2">
+                      <Badge 
+                        variant={errorRate < 30 ? "default" : errorRate < 60 ? "secondary" : "destructive"}
+                        className="text-xs"
+                      >
+                        {errorRate.toFixed(0)}% 錯誤率
+                      </Badge>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="flex items-center gap-1 text-success">
+                          <CheckCircle className="h-3 w-3" />
+                          {correctCount}
+                        </span>
+                        <span className="flex items-center gap-1 text-destructive">
+                          <XCircle className="h-3 w-3" />
+                          {wrongCount}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })
+          )}
+        </div>
+
+        {/* Motivational Message */}
+        {totalReviewed >= dailyGoal && (
+          <Card className="p-6 bg-gradient-to-r from-teal/10 to-success/10 border-success/20">
+            <div className="text-center space-y-2">
+              <p className="text-2xl">🎉</p>
+              <h3 className="text-lg font-semibold">太棒了！</h3>
+              <p className="text-sm text-muted-foreground">你已經完成今天的學習目標</p>
+            </div>
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default TodayReviewed;

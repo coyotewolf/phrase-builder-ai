@@ -405,7 +405,7 @@ const Statistics = () => {
         <div className="grid grid-cols-3 gap-3">
           <Card 
             className="p-4 text-center space-y-2 cursor-pointer hover:bg-muted/50 transition-colors"
-            onClick={() => navigate('/review')}
+            onClick={() => navigate('/statistics/today')}
           >
             <div className="p-3 bg-teal/20 rounded-2xl w-fit mx-auto">
               <Target className="h-6 w-6 text-teal" />
@@ -419,10 +419,7 @@ const Statistics = () => {
 
           <Card 
             className="p-4 text-center space-y-2 cursor-pointer hover:bg-muted/50 transition-colors"
-            onClick={() => {
-              const progressSection = document.getElementById('progress-by-level');
-              progressSection?.scrollIntoView({ behavior: 'smooth' });
-            }}
+            onClick={() => navigate('/statistics/streak')}
           >
             <div className="p-3 bg-yellow/20 rounded-2xl w-fit mx-auto">
               <Flame className="h-6 w-6 text-yellow" />
@@ -437,10 +434,7 @@ const Statistics = () => {
 
           <Card 
             className="p-4 text-center space-y-2 cursor-pointer hover:bg-muted/50 transition-colors"
-            onClick={() => {
-              const errorSection = document.getElementById('error-cards');
-              errorSection?.scrollIntoView({ behavior: 'smooth' });
-            }}
+            onClick={() => navigate('/statistics/accuracy')}
           >
             <div className="p-3 bg-success/20 rounded-2xl w-fit mx-auto">
               <TrendingUp className="h-6 w-6 text-success" />

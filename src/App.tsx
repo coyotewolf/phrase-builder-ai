@@ -9,6 +9,9 @@ import Wordbooks from "./pages/Wordbooks";
 import WordbookDetail from "./pages/WordbookDetail";
 import WordbooksByLevel from "./pages/WordbooksByLevel";
 import Statistics from "./pages/Statistics";
+import TodayReviewed from "./pages/TodayReviewed";
+import StreakHistory from "./pages/StreakHistory";
+import AccuracyDetails from "./pages/AccuracyDetails";
 import Settings from "./pages/Settings";
 import Review from "./pages/Review";
 import NotFound from "./pages/NotFound";
@@ -27,6 +30,9 @@ const App = () => (
           <Route path="/wordbooks/:id" element={<WordbookDetail />} />
           <Route path="/wordbooks-by-level/:level" element={<WordbooksByLevel />} />
           <Route path="/statistics" element={<Statistics />} />
+          <Route path="/statistics/today" element={<TodayReviewed />} />
+          <Route path="/statistics/streak" element={<StreakHistory />} />
+          <Route path="/statistics/accuracy" element={<AccuracyDetails />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/review" element={<Review />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
