@@ -66,7 +66,7 @@ const WordbookDetail = () => {
   const autoScrollInterval = useRef<NodeJS.Timeout | null>(null);
   const longPressedCardId = useRef<string | null>(null);
   const LONG_PRESS_DURATION = 500; // 500ms for long press
-  const SCROLL_EDGE_THRESHOLD = 50; // pixels from edge to trigger scroll
+  const SCROLL_EDGE_THRESHOLD = 30; // pixels from edge to trigger scroll
   const SCROLL_SPEED = 10; // pixels per scroll tick
 
   useEffect(() => {
