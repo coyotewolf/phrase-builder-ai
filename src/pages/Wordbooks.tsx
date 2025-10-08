@@ -7,6 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -35,6 +42,7 @@ const Wordbooks = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newWordbookName, setNewWordbookName] = useState("");
   const [newWordbookDescription, setNewWordbookDescription] = useState("");
+  const [newWordbookLevel, setNewWordbookLevel] = useState("不限制");
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -80,12 +88,14 @@ const Wordbooks = () => {
       await db.createWordbook({
         name: newWordbookName,
         description: newWordbookDescription,
+        level: newWordbookLevel,
       });
       
       toast.success("單詞書創建成功");
       setIsCreateDialogOpen(false);
       setNewWordbookName("");
       setNewWordbookDescription("");
+      setNewWordbookLevel("不限制");
       loadWordbooks();
     } catch (error) {
       console.error("Failed to create wordbook:", error);
@@ -149,10 +159,15 @@ const Wordbooks = () => {
                 <div className="flex items-start justify-between">
                   <div className="flex-1 space-y-2">
                     <h3 className="text-xl font-semibold">{wordbook.name}</h3>
-                    {wordbook.description && (
+                     {wordbook.description && (
                       <p className="text-sm text-muted-foreground">
                         {wordbook.description}
                       </p>
+                    )}
+                    {wordbook.level && (
+                      <span className="inline-block px-2 py-0.5 bg-primary/10 text-primary rounded text-xs">
+                        {wordbook.level}
+                      </span>
                     )}
                     <div className="flex items-center gap-4 text-sm">
                       <span className="flex items-center gap-1 text-muted-foreground">
@@ -217,6 +232,33 @@ const Wordbooks = () => {
                   value={newWordbookDescription}
                   onChange={(e) => setNewWordbookDescription(e.target.value)}
                 />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="level">程度</Label>
+                <Select value={newWordbookLevel} onValueChange={setNewWordbookLevel}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="選擇程度" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="不限制">不限制</SelectItem>
+                    <SelectItem value="國小">國小</SelectItem>
+                    <SelectItem value="國中">國中</SelectItem>
+                    <SelectItem value="高中">高中</SelectItem>
+                    <SelectItem value="大學">大學</SelectItem>
+                    <SelectItem value="TOEFL">托福 (TOEFL)</SelectItem>
+                    <SelectItem value="IELTS">雅思 (IELTS)</SelectItem>
+                    <SelectItem value="TOEIC">多益 (TOEIC)</SelectItem>
+                    <SelectItem value="GRE">GRE</SelectItem>
+                    <SelectItem value="GMAT">GMAT</SelectItem>
+                    <SelectItem value="SAT">SAT</SelectItem>
+                    <SelectItem value="CEFR-A1">CEFR A1</SelectItem>
+                    <SelectItem value="CEFR-A2">CEFR A2</SelectItem>
+                    <SelectItem value="CEFR-B1">CEFR B1</SelectItem>
+                    <SelectItem value="CEFR-B2">CEFR B2</SelectItem>
+                    <SelectItem value="CEFR-C1">CEFR C1</SelectItem>
+                    <SelectItem value="CEFR-C2">CEFR C2</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <DialogFooter>

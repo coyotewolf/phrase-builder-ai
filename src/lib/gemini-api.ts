@@ -47,13 +47,18 @@ Constraints: ${constraints}
 
 For each word, provide:
 1. Part of speech
-2. Clear English definition
-3. Up to ${limits.examples} example sentences
-4. Up to ${limits.synonyms} synonyms
-5. Up to ${limits.antonyms} antonyms (if applicable)
+2. Clear English definition appropriate for ${level} learners
+3. Up to ${limits.examples} example sentences showing different meanings if the word has multiple definitions
+4. Up to ${limits.synonyms} synonyms that are as comprehensive as possible and appropriate for ${level} level
+5. Up to ${limits.antonyms} antonyms that are as comprehensive as possible (if applicable)
 6. IPA pronunciation
 7. Register/formality level (e.g., formal, informal, academic)
 8. Any important usage notes
+
+IMPORTANT: 
+- If the word has multiple meanings, provide at least one example sentence for each major meaning
+- Try to provide as many relevant synonyms and antonyms as possible within the limits
+- Make sure all synonyms and antonyms are appropriate for ${level} learners
 
 Return ONLY a valid JSON array with this exact structure:
 [

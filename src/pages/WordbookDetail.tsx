@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Plus, ArrowLeft, Trash2, Upload, Sparkles, Edit } from "lucide-react";
+import { Plus, ArrowLeft, Trash2, Upload, Sparkles, Edit, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ import { parseCSV } from "@/lib/csv";
 import { toast } from "sonner";
 import { ApiKeyDialog } from "@/components/ApiKeyDialog";
 import { EditCardDialog } from "@/components/EditCardDialog";
+import { EditWordbookDialog } from "@/components/EditWordbookDialog";
 
 const WordbookDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -29,6 +30,7 @@ const WordbookDetail = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isEditWordbookDialogOpen, setIsEditWordbookDialogOpen] = useState(false);
   const [selectedCard, setSelectedCard] = useState<VocabCard | null>(null);
   const [newWord, setNewWord] = useState("");
   const [newPhonetic, setNewPhonetic] = useState("");
@@ -124,8 +126,13 @@ const WordbookDetail = () => {
 
     try {
       setIsGenerating(true);
+      const level = wordbook?.level || 'TOEFL';
       const details = await generateWordDetails(
-        { words: [newWord], level: 'TOEFL' },
+        { 
+          words: [newWord], 
+          level,
+          limits: { synonyms: 10, antonyms: 10, examples: 5 }
+        },
         settings.gemini_api_key
       );
       
@@ -163,6 +170,19 @@ const WordbookDetail = () => {
       loadData();
     } catch (error) {
       console.error("Failed to update card:", error);
+      toast.error("更新失敗");
+    }
+  };
+
+  const handleSaveWordbook = async (updates: Partial<Wordbook>) => {
+    if (!id) return;
+
+    try {
+      await db.updateWordbook(id, updates);
+      toast.success("單詞書已更新");
+      loadData();
+    } catch (error) {
+      console.error("Failed to update wordbook:", error);
       toast.error("更新失敗");
     }
   };
@@ -241,10 +261,24 @@ const WordbookDetail = () => {
           <Button variant="ghost" size="icon" onClick={() => navigate("/wordbooks")}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-            <div>
-              <h1 className="text-3xl font-bold">{wordbook.name}</h1>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <h1 className="text-3xl font-bold">{wordbook.name}</h1>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => setIsEditWordbookDialogOpen(true)}
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </div>
               {wordbook.description && (
                 <p className="text-muted-foreground">{wordbook.description}</p>
+              )}
+              {wordbook.level && (
+                <span className="inline-block mt-1 px-2 py-0.5 bg-primary/10 text-primary rounded text-xs">
+                  {wordbook.level}
+                </span>
               )}
             </div>
           </div>
@@ -532,6 +566,14 @@ const WordbookDetail = () => {
           onOpenChange={setIsEditDialogOpen}
           card={selectedCard}
           onSave={handleSaveCard}
+          wordbookLevel={wordbook?.level}
+        />
+
+        <EditWordbookDialog
+          open={isEditWordbookDialogOpen}
+          onOpenChange={setIsEditWordbookDialogOpen}
+          wordbook={wordbook}
+          onSave={handleSaveWordbook}
         />
       </div>
     </div>
