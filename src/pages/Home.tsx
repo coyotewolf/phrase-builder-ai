@@ -3,10 +3,13 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Menu, Bell, Clock, TrendingUp, Zap, Play, Flame, BookText, Target } from "lucide-react";
-import { db } from "@/lib/db";
+import { db, Wordbook } from "@/lib/db";
 import BottomNav from "@/components/BottomNav";
 import { SideMenu } from "@/components/SideMenu";
 import { NotificationsSheet } from "@/components/NotificationsSheet";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const Home = () => {
   const navigate = useNavigate();
@@ -17,31 +20,75 @@ const Home = () => {
   const [streakDays, setStreakDays] = useState(0);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [allWordbooks, setAllWordbooks] = useState<Wordbook[]>([]);
+  const [selectedWordbooks, setSelectedWordbooks] = useState<string[]>([]);
+  const [showWordbookSelector, setShowWordbookSelector] = useState(false);
+
+  useEffect(() => {
+    loadWordbooks();
+    loadStats();
+  }, []);
 
   useEffect(() => {
     loadStats();
-  }, []);
+  }, [selectedWordbooks]);
+
+  const loadWordbooks = async () => {
+    try {
+      const wordbooks = await db.getAllWordbooks();
+      setAllWordbooks(wordbooks);
+      
+      // Load saved selection from localStorage
+      const saved = localStorage.getItem('selectedWordbooks');
+      if (saved) {
+        setSelectedWordbooks(JSON.parse(saved));
+      } else {
+        // Select all by default
+        setSelectedWordbooks(wordbooks.map(w => w.id));
+      }
+    } catch (error) {
+      console.error("Failed to load wordbooks:", error);
+    }
+  };
+
+  const toggleWordbookSelection = (wordbookId: string) => {
+    const newSelection = selectedWordbooks.includes(wordbookId)
+      ? selectedWordbooks.filter(id => id !== wordbookId)
+      : [...selectedWordbooks, wordbookId];
+    
+    setSelectedWordbooks(newSelection);
+    localStorage.setItem('selectedWordbooks', JSON.stringify(newSelection));
+  };
 
   const loadStats = async () => {
     try {
       const settings = await db.getUserSettings();
       setDailyGoal(settings.daily_goal);
 
-      const dueCards = await db.getDueCards();
-      setDueCount(dueCards.length);
-
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
-      const allWordbooks = await db.getAllWordbooks();
+      // Filter wordbooks based on selection
+      const targetWordbooks = allWordbooks.filter(wb => 
+        selectedWordbooks.length === 0 || selectedWordbooks.includes(wb.id)
+      );
+      
       let count = 0;
       let total = 0;
+      let dueCardsCount = 0;
       
-      for (const wordbook of allWordbooks) {
+      for (const wordbook of targetWordbooks) {
         const cards = await db.getCardsByWordbook(wordbook.id);
         total += cards.length;
         
         for (const card of cards) {
+          // Count due cards
+          const srs = await db.getCardSRS(card.id);
+          if (srs && new Date(srs.due_at) <= new Date()) {
+            dueCardsCount++;
+          }
+          
+          // Count today's reviewed cards
           const stats = await db.getCardStats(card.id);
           if (stats?.last_reviewed_at) {
             const reviewDate = new Date(stats.last_reviewed_at);
@@ -55,6 +102,7 @@ const Home = () => {
       
       setTodayCompleted(count);
       setTotalWords(total);
+      setDueCount(dueCardsCount);
 
       // Calculate streak
       let streak = 0;
@@ -63,7 +111,7 @@ const Home = () => {
       
       while (true) {
         let hasReview = false;
-        for (const wordbook of allWordbooks) {
+        for (const wordbook of targetWordbooks) {
           const cards = await db.getCardsByWordbook(wordbook.id);
           for (const card of cards) {
             const stats = await db.getCardStats(card.id);
@@ -135,6 +183,46 @@ const Home = () => {
             />
           </div>
         </div>
+
+        {/* Wordbook Selector */}
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-semibold">目標單詞書</h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowWordbookSelector(!showWordbookSelector)}
+            >
+              {showWordbookSelector ? "收起" : "選擇"}
+            </Button>
+          </div>
+          
+          {showWordbookSelector ? (
+            <ScrollArea className="h-48">
+              <div className="space-y-2">
+                {allWordbooks.map((wordbook) => (
+                  <div key={wordbook.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={wordbook.id}
+                      checked={selectedWordbooks.includes(wordbook.id)}
+                      onCheckedChange={() => toggleWordbookSelection(wordbook.id)}
+                    />
+                    <Label
+                      htmlFor={wordbook.id}
+                      className="text-sm font-normal cursor-pointer flex-1"
+                    >
+                      {wordbook.name}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              已選擇 {selectedWordbooks.length} 本單詞書
+            </p>
+          )}
+        </Card>
 
         {/* Start Learning */}
         <div className="space-y-4">
@@ -219,12 +307,15 @@ const Home = () => {
                   <p className="text-sm text-muted-foreground">總單字數</p>
                 </div>
                 
-                <div className="space-y-2">
+                 <div 
+                  className="space-y-2 cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => navigate("/review?mode=due")}
+                >
                   <div className="flex items-center justify-center">
                     <Target className="h-5 w-5 text-accent mr-1" />
                   </div>
                   <p className="text-4xl font-bold">{dueCount}</p>
-                  <p className="text-sm text-muted-foreground">今日待複習</p>
+                  <p className="text-sm text-muted-foreground">需要複習的單字</p>
                 </div>
             </div>
           </Card>

@@ -78,11 +78,24 @@ const Review = () => {
     try {
       setLoading(true);
       console.log("Loading cards for mode:", mode);
+      
+      // Load selected wordbooks from localStorage
+      const savedSelection = localStorage.getItem('selectedWordbooks');
+      const selectedIds = savedSelection ? JSON.parse(savedSelection) : [];
+      
       const allWordbooks = await db.getAllWordbooks();
       console.log("Found wordbooks:", allWordbooks.length);
+      
+      // Filter wordbooks based on selection
+      const targetWordbooks = selectedIds.length > 0 
+        ? allWordbooks.filter(wb => selectedIds.includes(wb.id))
+        : allWordbooks;
+      
+      console.log("Target wordbooks:", targetWordbooks.length);
+      
       let allCards: VocabCard[] = [];
       
-      for (const wordbook of allWordbooks) {
+      for (const wordbook of targetWordbooks) {
         const wordbookCards = await db.getCardsByWordbook(wordbook.id);
         allCards = [...allCards, ...wordbookCards];
       }
