@@ -39,7 +39,7 @@ const Review = () => {
   useEffect(() => {
     loadCards();
     loadTTSSettings();
-  }, [mode]);
+  }, [mode, searchParams]);
 
   useEffect(() => {
     // Auto-play pronunciation when card changes
@@ -125,21 +125,61 @@ const Review = () => {
           break;
         }
         case "frequent-errors": {
+          // Get filter parameters from URL
+          const filterMode = searchParams.get("filter") || "top-n";
+          const topN = Number(searchParams.get("topN")) || 20;
+          const minErrors = Number(searchParams.get("minErrors")) || 3;
+          const minErrorRate = Number(searchParams.get("minErrorRate")) || 30;
+
           const cardsWithStats = await Promise.all(
             allCards.map(async (card) => {
               const stats = await db.getCardStats(card.id);
               return { card, stats };
             })
           );
-          filteredCards = cardsWithStats
-            .filter(({ stats }) => stats && stats.shown_count > 0)
-            .sort((a, b) => {
-              const errorRateA = a.stats!.shown_count > 0 ? a.stats!.wrong_count / a.stats!.shown_count : 0;
-              const errorRateB = b.stats!.shown_count > 0 ? b.stats!.wrong_count / b.stats!.shown_count : 0;
-              return errorRateB - errorRateA;
-            })
-            .slice(0, 20)
-            .map(({ card }) => card);
+
+          let errorCards = cardsWithStats.filter(({ stats }) => stats && stats.shown_count > 0);
+
+          // Apply filter based on mode
+          switch (filterMode) {
+            case "top-n":
+              // Sort by error rate and take top N
+              errorCards = errorCards
+                .sort((a, b) => {
+                  const errorRateA = a.stats!.wrong_count / a.stats!.shown_count;
+                  const errorRateB = b.stats!.wrong_count / b.stats!.shown_count;
+                  return errorRateB - errorRateA;
+                })
+                .slice(0, topN);
+              break;
+            
+            case "min-errors":
+              // Filter by minimum error count
+              errorCards = errorCards
+                .filter(({ stats }) => stats!.wrong_count >= minErrors)
+                .sort((a, b) => {
+                  const errorRateA = a.stats!.wrong_count / a.stats!.shown_count;
+                  const errorRateB = b.stats!.wrong_count / b.stats!.shown_count;
+                  return errorRateB - errorRateA;
+                });
+              break;
+            
+            case "min-error-rate":
+              // Filter by minimum error rate percentage
+              errorCards = errorCards
+                .filter(({ stats }) => {
+                  const errorRate = (stats!.wrong_count / stats!.shown_count) * 100;
+                  return errorRate >= minErrorRate;
+                })
+                .sort((a, b) => {
+                  const errorRateA = a.stats!.wrong_count / a.stats!.shown_count;
+                  const errorRateB = b.stats!.wrong_count / b.stats!.shown_count;
+                  return errorRateB - errorRateA;
+                });
+              break;
+          }
+
+          filteredCards = errorCards.map(({ card }) => card);
           break;
         }
         case "mixed":

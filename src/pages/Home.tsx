@@ -10,6 +10,7 @@ import { NotificationsSheet } from "@/components/NotificationsSheet";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ErrorCardsFilterDialog } from "@/components/ErrorCardsFilterDialog";
 
 const Home = () => {
   const navigate = useNavigate();
@@ -23,6 +24,7 @@ const Home = () => {
   const [allWordbooks, setAllWordbooks] = useState<Wordbook[]>([]);
   const [selectedWordbooks, setSelectedWordbooks] = useState<string[]>([]);
   const [showWordbookSelector, setShowWordbookSelector] = useState(false);
+  const [isErrorFilterDialogOpen, setIsErrorFilterDialogOpen] = useState(false);
 
   useEffect(() => {
     loadWordbooks();
@@ -250,7 +252,7 @@ const Home = () => {
 
           <Card
             className="p-6 cursor-pointer hover:bg-muted/50 transition-colors"
-            onClick={() => navigate("/review?mode=frequent-errors")}
+            onClick={() => setIsErrorFilterDialogOpen(true)}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -324,6 +326,7 @@ const Home = () => {
 
       <SideMenu open={isMenuOpen} onOpenChange={setIsMenuOpen} />
       <NotificationsSheet open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen} />
+      <ErrorCardsFilterDialog open={isErrorFilterDialogOpen} onOpenChange={setIsErrorFilterDialogOpen} />
       <BottomNav />
     </div>
   );
