@@ -655,6 +655,54 @@ const WordbookDetail = () => {
     }
   };
 
+  const handleExportWordbook = async () => {
+    if (!id || !wordbook) return;
+
+    try {
+      toast.info("正在準備匯出資料...");
+
+      // Get all cards for this wordbook
+      const wordbookCards = await db.getCardsByWordbook(id);
+
+      // Get stats and SRS data for each card
+      const cardStats = await Promise.all(
+        wordbookCards.map(card => db.getCardStats(card.id))
+      );
+      const cardSRS = await Promise.all(
+        wordbookCards.map(card => db.getCardSRS(card.id))
+      );
+
+      // Prepare export data
+      const exportData = {
+        wordbooks: [wordbook],
+        cards: wordbookCards,
+        card_stats: cardStats.filter(Boolean),
+        card_srs: cardSRS.filter(Boolean),
+        exported_at: new Date().toISOString(),
+      };
+
+      // Validate data
+      const jsonString = JSON.stringify(exportData, null, 2);
+      JSON.parse(jsonString); // Validate JSON structure
+
+      // Create and download file
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${wordbook.name}_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.success(`成功匯出單詞書「${wordbook.name}」！包含 ${wordbookCards.length} 張卡片`);
+    } catch (error) {
+      console.error("Failed to export wordbook:", error);
+      toast.error("匯出單詞書失敗：" + (error instanceof Error ? error.message : "未知錯誤"));
+    }
+  };
+
   const handleCSVUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !id) return;
@@ -1093,6 +1141,7 @@ const WordbookDetail = () => {
           wordbook={wordbook}
           onSave={handleSaveWordbook}
           onFillIncomplete={handleFillIncompleteCards}
+          onExport={handleExportWordbook}
         />
 
         <RegenerateCardsDialog
@@ -1148,6 +1197,7 @@ const WordbookDetail = () => {
         wordbook={wordbook}
         onSave={handleSaveWordbook}
         onFillIncomplete={handleFillIncompleteCards}
+        onExport={handleExportWordbook}
       />
 
       <RegenerateCardsDialog

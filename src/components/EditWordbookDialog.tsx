@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Wordbook } from "@/lib/db";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Download } from "lucide-react";
 
 interface EditWordbookDialogProps {
   open: boolean;
@@ -27,9 +27,10 @@ interface EditWordbookDialogProps {
   wordbook: Wordbook | null;
   onSave: (updates: Partial<Wordbook>) => void;
   onFillIncomplete: () => void;
+  onExport: () => void;
 }
 
-export function EditWordbookDialog({ open, onOpenChange, wordbook, onSave, onFillIncomplete }: EditWordbookDialogProps) {
+export function EditWordbookDialog({ open, onOpenChange, wordbook, onSave, onFillIncomplete, onExport }: EditWordbookDialogProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [level, setLevel] = useState("不限制");
@@ -53,6 +54,11 @@ export function EditWordbookDialog({ open, onOpenChange, wordbook, onSave, onFil
 
   const handleFillIncomplete = () => {
     onFillIncomplete();
+    onOpenChange(false);
+  };
+
+  const handleExport = () => {
+    onExport();
     onOpenChange(false);
   };
 
@@ -123,6 +129,22 @@ export function EditWordbookDialog({ open, onOpenChange, wordbook, onSave, onFil
               >
                 <Sparkles className="h-4 w-4 mr-2" />
                 一鍵補齊不完整單字
+              </Button>
+            </div>
+          </div>
+          <div className="pt-4 border-t">
+            <div className="space-y-2">
+              <Label>資料管理</Label>
+              <p className="text-sm text-muted-foreground">
+                將此單詞書及其所有單字卡匯出為 JSON 檔案
+              </p>
+              <Button
+                variant="outline"
+                onClick={handleExport}
+                className="w-full"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                匯出單詞書
               </Button>
             </div>
           </div>
