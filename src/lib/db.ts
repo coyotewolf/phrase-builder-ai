@@ -243,20 +243,30 @@ class VocabularyDB {
 
   async updateCard(id: string, updates: Partial<Card>): Promise<Card> {
     const store = await this.getStore('cards', 'readwrite');
-    const existing = await this.getCard(id);
-    if (!existing) throw new Error('Card not found');
-    
-    const updated: Card = {
-      ...existing,
-      ...updates,
-      id,
-      updated_at: new Date().toISOString(),
-    };
     
     return new Promise((resolve, reject) => {
-      const request = store.put(updated);
-      request.onsuccess = () => resolve(updated);
-      request.onerror = () => reject(request.error);
+      const getRequest = store.get(id);
+      
+      getRequest.onsuccess = () => {
+        const existing = getRequest.result;
+        if (!existing) {
+          reject(new Error('Card not found'));
+          return;
+        }
+        
+        const updated: Card = {
+          ...existing,
+          ...updates,
+          id,
+          updated_at: new Date().toISOString(),
+        };
+        
+        const putRequest = store.put(updated);
+        putRequest.onsuccess = () => resolve(updated);
+        putRequest.onerror = () => reject(putRequest.error);
+      };
+      
+      getRequest.onerror = () => reject(getRequest.error);
     });
   }
 
