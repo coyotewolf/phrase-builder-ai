@@ -61,8 +61,12 @@ const WordbookDetail = () => {
   const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
   const [isDragging, setIsDragging] = useState(false);
   const [isFilling, setIsFilling] = useState(false);
+  const [initialSelectionState, setInitialSelectionState] = useState<Map<string, boolean>>(new Map());
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const autoScrollInterval = useRef<NodeJS.Timeout | null>(null);
   const LONG_PRESS_DURATION = 500; // 500ms for long press
+  const SCROLL_EDGE_THRESHOLD = 80; // pixels from edge to trigger scroll
+  const SCROLL_SPEED = 10; // pixels per scroll tick
 
   useEffect(() => {
     loadData();
@@ -386,9 +390,43 @@ const WordbookDetail = () => {
     setIsDragging(false);
   };
 
+  const startAutoScroll = (clientY: number) => {
+    const windowHeight = window.innerHeight;
+    
+    if (autoScrollInterval.current) {
+      clearInterval(autoScrollInterval.current);
+    }
+    
+    if (clientY < SCROLL_EDGE_THRESHOLD) {
+      // Scroll up
+      autoScrollInterval.current = setInterval(() => {
+        window.scrollBy(0, -SCROLL_SPEED);
+      }, 16); // ~60fps
+    } else if (clientY > windowHeight - SCROLL_EDGE_THRESHOLD) {
+      // Scroll down
+      autoScrollInterval.current = setInterval(() => {
+        window.scrollBy(0, SCROLL_SPEED);
+      }, 16);
+    }
+  };
+
+  const stopAutoScroll = () => {
+    if (autoScrollInterval.current) {
+      clearInterval(autoScrollInterval.current);
+      autoScrollInterval.current = null;
+    }
+  };
+
   const handleCardLongPress = (cardId: string) => {
     if (!isSelectionMode) {
       enterSelectionMode(cardId);
+      setIsDragging(true);
+      // Store initial selection states when starting drag
+      const stateMap = new Map<string, boolean>();
+      cards.forEach(card => {
+        stateMap.set(card.id, selectedCardIds.has(card.id));
+      });
+      setInitialSelectionState(stateMap);
     }
   };
 
@@ -397,8 +435,6 @@ const WordbookDetail = () => {
       longPressTimer.current = setTimeout(() => {
         handleCardLongPress(cardId);
       }, LONG_PRESS_DURATION);
-    } else {
-      setIsDragging(true);
     }
   };
 
@@ -408,6 +444,8 @@ const WordbookDetail = () => {
       longPressTimer.current = null;
     }
     setIsDragging(false);
+    stopAutoScroll();
+    setInitialSelectionState(new Map());
   };
 
   const handleCardTouchMove = () => {
@@ -754,12 +792,28 @@ const WordbookDetail = () => {
                       handleCardTouchMove();
                       if (isSelectionMode && isDragging) {
                         const touch = e.touches[0];
+                        
+                        // Auto-scroll when near edges
+                        startAutoScroll(touch.clientY);
+                        
                         const element = document.elementFromPoint(touch.clientX, touch.clientY);
                         const cardElement = element?.closest('[data-card-id]');
                         if (cardElement) {
                           const hoveredCardId = cardElement.getAttribute('data-card-id');
-                          if (hoveredCardId && !selectedCardIds.has(hoveredCardId)) {
-                            toggleCardSelection(hoveredCardId);
+                          if (hoveredCardId) {
+                            const wasInitiallySelected = initialSelectionState.get(hoveredCardId) || false;
+                            const isCurrentlySelected = selectedCardIds.has(hoveredCardId);
+                            
+                            // Toggle based on initial state: if was selected, deselect; if wasn't, select
+                            if (wasInitiallySelected && isCurrentlySelected) {
+                              setSelectedCardIds(prev => {
+                                const newSet = new Set(prev);
+                                newSet.delete(hoveredCardId);
+                                return newSet;
+                              });
+                            } else if (!wasInitiallySelected && !isCurrentlySelected) {
+                              setSelectedCardIds(prev => new Set(prev).add(hoveredCardId));
+                            }
                           }
                         }
                       }
@@ -769,6 +823,12 @@ const WordbookDetail = () => {
                       if (isSelectionMode) {
                         toggleCardSelection(card.id);
                         setIsDragging(true);
+                        // Store initial selection states
+                        const stateMap = new Map<string, boolean>();
+                        cards.forEach(c => {
+                          stateMap.set(c.id, selectedCardIds.has(c.id));
+                        });
+                        setInitialSelectionState(stateMap);
                       } else {
                         handleCardTouchStart(card.id);
                       }
@@ -777,10 +837,26 @@ const WordbookDetail = () => {
                       e.stopPropagation();
                       handleCardTouchEnd();
                     }}
+                    onMouseMove={(e) => {
+                      if (isSelectionMode && isDragging) {
+                        // Auto-scroll when near edges
+                        startAutoScroll(e.clientY);
+                      }
+                    }}
                     onMouseEnter={() => {
                       if (isSelectionMode && isDragging) {
-                        if (!selectedCardIds.has(card.id)) {
-                          toggleCardSelection(card.id);
+                        const wasInitiallySelected = initialSelectionState.get(card.id) || false;
+                        const isCurrentlySelected = selectedCardIds.has(card.id);
+                        
+                        // Toggle based on initial state
+                        if (wasInitiallySelected && isCurrentlySelected) {
+                          setSelectedCardIds(prev => {
+                            const newSet = new Set(prev);
+                            newSet.delete(card.id);
+                            return newSet;
+                          });
+                        } else if (!wasInitiallySelected && !isCurrentlySelected) {
+                          setSelectedCardIds(prev => new Set(prev).add(card.id));
                         }
                       }
                     }}
