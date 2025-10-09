@@ -32,16 +32,16 @@ export const DailyGoalDialog = ({ open, onOpenChange, currentGoal, onSave }: Dai
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-md max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto p-4">
         <DialogHeader>
-          <DialogTitle>Daily Goal</DialogTitle>
+          <DialogTitle>每日目標</DialogTitle>
           <DialogDescription>
-            Set how many words you want to learn each day
+            設定你每天想學習的單字數量
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label>Words per day: {goal}</Label>
+            <Label>每日單字數：{goal}</Label>
             <Slider
               value={[goal]}
               onValueChange={(value) => setGoal(value[0])}
@@ -53,9 +53,9 @@ export const DailyGoalDialog = ({ open, onOpenChange, currentGoal, onSave }: Dai
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            取消
           </Button>
-          <Button onClick={handleSave}>Save</Button>
+          <Button onClick={handleSave}>儲存</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

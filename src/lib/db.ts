@@ -80,6 +80,10 @@ export interface UserSettings {
   reminder_days?: string[];
   gemini_api_key?: string;
   review_mode?: 'traditional' | 'srs'; // Traditional = yesterday review, SRS = spaced repetition
+  errorCardsFilterMode?: 'top-n' | 'min-errors' | 'min-error-rate';
+  errorCardsTopN?: number;
+  errorCardsMinErrors?: number;
+  errorCardsMinErrorRate?: number;
 }
 
 export interface Notification {
@@ -103,6 +107,11 @@ export interface DailyReviewRecord {
   updated_at: string;
 }
 
+function logIndexedDBError(operation: string, error: DOMException | null) {
+  console.error(`IndexedDB Error in ${operation}:`, error);
+  // TODO: Integrate with a global toast notification system if needed
+}
+
 const DB_NAME = 'vocabulary_flow';
 const DB_VERSION = 3;
 
@@ -113,7 +122,10 @@ class VocabularyDB {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        logIndexedDBError('init', request.error);
+        reject(request.error);
+      };
       request.onsuccess = () => {
         this.db = request.result;
         resolve();
@@ -177,12 +189,29 @@ class VocabularyDB {
   }
 
   // Wordbooks
-  async getAllWordbooks(): Promise<Wordbook[]> {
+  async getAllWordbooks(offset: number = 0, limit: number = Infinity): Promise<Wordbook[]> {
     const store = await this.getStore('wordbooks');
     return new Promise((resolve, reject) => {
-      const request = store.getAll();
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
+      const results: Wordbook[] = [];
+      let count = 0;
+      const request = store.openCursor();
+
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest).result;
+        if (cursor) {
+          if (count >= offset && results.length < limit) {
+            results.push(cursor.value);
+          }
+          count++;
+          cursor.continue();
+        } else {
+          resolve(results);
+        }
+      };
+      request.onerror = () => {
+        logIndexedDBError('getAllWordbooks', request.error);
+        reject(request.error);
+      };
     });
   }
 
@@ -191,7 +220,10 @@ class VocabularyDB {
     return new Promise((resolve, reject) => {
       const request = store.get(id);
       request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        logIndexedDBError('getWordbook', request.error);
+        reject(request.error);
+      };
     });
   }
 
@@ -207,7 +239,10 @@ class VocabularyDB {
     return new Promise((resolve, reject) => {
       const request = store.add(newWordbook);
       request.onsuccess = () => resolve(newWordbook);
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        logIndexedDBError('createWordbook', request.error);
+        reject(request.error);
+      };
     });
   }
 
@@ -233,10 +268,16 @@ class VocabularyDB {
         
         const putRequest = store.put(updated);
         putRequest.onsuccess = () => resolve(updated);
-        putRequest.onerror = () => reject(putRequest.error);
+        putRequest.onerror = () => {
+          logIndexedDBError('updateWordbook.put', putRequest.error);
+          reject(putRequest.error);
+        };
       };
       
-      getRequest.onerror = () => reject(getRequest.error);
+      getRequest.onerror = () => {
+        logIndexedDBError('updateWordbook.get', getRequest.error);
+        reject(getRequest.error);
+      };
     });
   }
 
@@ -245,18 +286,38 @@ class VocabularyDB {
     return new Promise((resolve, reject) => {
       const request = store.delete(id);
       request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        logIndexedDBError('deleteWordbook', request.error);
+        reject(request.error);
+      };
     });
   }
 
   // Cards
-  async getCardsByWordbook(wordbookId: string): Promise<Card[]> {
+  async getCardsByWordbook(wordbookId: string, offset: number = 0, limit: number = Infinity): Promise<Card[]> {
     const store = await this.getStore('cards');
     const index = store.index('wordbook_id');
     return new Promise((resolve, reject) => {
-      const request = index.getAll(wordbookId);
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
+      const results: Card[] = [];
+      let count = 0;
+      const request = index.openCursor(IDBKeyRange.only(wordbookId));
+
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest).result;
+        if (cursor) {
+          if (count >= offset && results.length < limit) {
+            results.push(cursor.value);
+          }
+          count++;
+          cursor.continue();
+        } else {
+          resolve(results);
+        }
+      };
+      request.onerror = () => {
+        logIndexedDBError('getCardsByWordbook', request.error);
+        reject(request.error);
+      };
     });
   }
 
@@ -265,7 +326,10 @@ class VocabularyDB {
     return new Promise((resolve, reject) => {
       const request = store.get(id);
       request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        logIndexedDBError('getCard', request.error);
+        reject(request.error);
+      };
     });
   }
 
@@ -283,7 +347,10 @@ class VocabularyDB {
     return new Promise((resolve, reject) => {
       const request = store.add(newCard);
       request.onsuccess = () => resolve(newCard);
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        logIndexedDBError('createCard', request.error);
+        reject(request.error);
+      };
     });
   }
 
@@ -309,10 +376,16 @@ class VocabularyDB {
         
         const putRequest = store.put(updated);
         putRequest.onsuccess = () => resolve(updated);
-        putRequest.onerror = () => reject(putRequest.error);
+        putRequest.onerror = () => {
+          logIndexedDBError('updateCard.put', putRequest.error);
+          reject(putRequest.error);
+        };
       };
       
-      getRequest.onerror = () => reject(getRequest.error);
+      getRequest.onerror = () => {
+        logIndexedDBError('updateCard.get', getRequest.error);
+        reject(getRequest.error);
+      };
     });
   }
 
@@ -321,7 +394,10 @@ class VocabularyDB {
     return new Promise((resolve, reject) => {
       const request = store.delete(id);
       request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        logIndexedDBError('deleteCard', request.error);
+        reject(request.error);
+      };
     });
   }
 
@@ -332,7 +408,10 @@ class VocabularyDB {
     return new Promise((resolve, reject) => {
       const request = index.get(cardId);
       request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        logIndexedDBError('getCardStats', request.error);
+        reject(request.error);
+      };
     });
   }
 
@@ -354,7 +433,10 @@ class VocabularyDB {
     return new Promise((resolve, reject) => {
       const request = existing ? store.put(stats) : store.add(stats);
       request.onsuccess = () => resolve(stats);
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        logIndexedDBError('createOrUpdateCardStats', request.error);
+        reject(request.error);
+      };
     });
   }
 
@@ -365,7 +447,10 @@ class VocabularyDB {
     return new Promise((resolve, reject) => {
       const request = index.get(cardId);
       request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        logIndexedDBError('getCardSRS', request.error);
+        reject(request.error);
+      };
     });
   }
 
@@ -388,7 +473,10 @@ class VocabularyDB {
     return new Promise((resolve, reject) => {
       const request = existing ? store.put(srs) : store.add(srs);
       request.onsuccess = () => resolve(srs);
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        logIndexedDBError('createOrUpdateCardSRS', request.error);
+        reject(request.error);
+      };
     });
   }
 
@@ -410,7 +498,10 @@ class VocabularyDB {
           resolve(results);
         }
       };
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        logIndexedDBError('getDueCards', request.error);
+        reject(request.error);
+      };
     });
   }
 
@@ -425,10 +516,17 @@ class VocabularyDB {
           daily_goal: 20,
           theme: 'system',
           tts_enabled: true,
+          errorCardsFilterMode: 'top-n', // Default value
+          errorCardsTopN: 20, // Default value
+          errorCardsMinErrors: 3, // Default value
+          errorCardsMinErrorRate: 50, // Default value
         };
         resolve(result);
       };
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        logIndexedDBError('getUserSettings', request.error);
+        reject(request.error);
+      };
     });
   }
 
@@ -445,7 +543,10 @@ class VocabularyDB {
     return new Promise((resolve, reject) => {
       const request = store.put(settings);
       request.onsuccess = () => resolve(settings);
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        logIndexedDBError('updateUserSettings', request.error);
+        reject(request.error);
+      };
     });
   }
 
@@ -456,7 +557,10 @@ class VocabularyDB {
     return new Promise((resolve, reject) => {
       const request = index.get(date);
       request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        logIndexedDBError('getDailyReviewRecord', request.error);
+        reject(request.error);
+      };
     });
   }
 
@@ -465,7 +569,10 @@ class VocabularyDB {
     return new Promise((resolve, reject) => {
       const request = store.getAll();
       request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        logIndexedDBError('getAllDailyReviewRecords', request.error);
+        reject(request.error);
+      };
     });
   }
 
@@ -503,7 +610,10 @@ class VocabularyDB {
     return new Promise((resolve, reject) => {
       const request = store.put(record);
       request.onsuccess = () => resolve(record);
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        logIndexedDBError('createOrUpdateDailyReviewRecord', request.error);
+        reject(request.error);
+      };
     });
   }
 
@@ -518,7 +628,10 @@ class VocabularyDB {
         results.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         resolve(results);
       };
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        logIndexedDBError('getAllNotifications', request.error);
+        reject(request.error);
+      };
     });
   }
 
@@ -537,7 +650,10 @@ class VocabularyDB {
     return new Promise((resolve, reject) => {
       const request = store.add(newNotification);
       request.onsuccess = () => resolve(newNotification);
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        logIndexedDBError('createNotification', request.error);
+        reject(request.error);
+      };
     });
   }
 
@@ -551,12 +667,18 @@ class VocabularyDB {
           notification.read = true;
           const putRequest = store.put(notification);
           putRequest.onsuccess = () => resolve();
-          putRequest.onerror = () => reject(putRequest.error);
+          putRequest.onerror = () => {
+            logIndexedDBError('markNotificationAsRead.put', putRequest.error);
+            reject(putRequest.error);
+          };
         } else {
           resolve();
         }
       };
-      getRequest.onerror = () => reject(getRequest.error);
+      getRequest.onerror = () => {
+        logIndexedDBError('markNotificationAsRead.get', getRequest.error);
+        reject(getRequest.error);
+      };
     });
   }
 
@@ -576,7 +698,10 @@ class VocabularyDB {
       
       Promise.all(promises)
         .then(() => resolve())
-        .catch(reject);
+        .catch(error => {
+          logIndexedDBError('markAllNotificationsAsRead', error);
+          reject(error);
+        });
     });
   }
 
@@ -585,7 +710,10 @@ class VocabularyDB {
     return new Promise((resolve, reject) => {
       const request = store.delete(id);
       request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        logIndexedDBError('deleteNotification', request.error);
+        reject(request.error);
+      };
     });
   }
 
@@ -611,32 +739,50 @@ class VocabularyDB {
       new Promise<Wordbook[]>((resolve, reject) => {
         const request = wordbookStore.getAll();
         request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
+        request.onerror = () => {
+          logIndexedDBError('exportAllData.wordbooks', request.error);
+          reject(request.error);
+        };
       }),
       new Promise<Card[]>((resolve, reject) => {
         const request = cardStore.getAll();
         request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
+        request.onerror = () => {
+          logIndexedDBError('exportAllData.cards', request.error);
+          reject(request.error);
+        };
       }),
       new Promise<CardStats[]>((resolve, reject) => {
         const request = statsStore.getAll();
         request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
+        request.onerror = () => {
+          logIndexedDBError('exportAllData.card_stats', request.error);
+          reject(request.error);
+        };
       }),
       new Promise<CardSRS[]>((resolve, reject) => {
         const request = srsStore.getAll();
         request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
+        request.onerror = () => {
+          logIndexedDBError('exportAllData.card_srs', request.error);
+          reject(request.error);
+        };
       }),
       new Promise<DailyReviewRecord[]>((resolve, reject) => {
         const request = dailyStore.getAll();
         request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
+        request.onerror = () => {
+          logIndexedDBError('exportAllData.daily_review_records', request.error);
+          reject(request.error);
+        };
       }),
       new Promise<Notification[]>((resolve, reject) => {
         const request = notifStore.getAll();
         request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
+        request.onerror = () => {
+          logIndexedDBError('exportAllData.notifications', request.error);
+          reject(request.error);
+        };
       })
     ]);
 
@@ -666,7 +812,10 @@ class VocabularyDB {
       await new Promise<void>((resolve, reject) => {
         const request = store.clear();
         request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
+        request.onerror = () => {
+          logIndexedDBError(`importAllData.clear.${storeName}`, request.error);
+          reject(request.error);
+        };
       });
     }
 
@@ -677,7 +826,10 @@ class VocabularyDB {
         await new Promise((resolve, reject) => {
           const request = store.add(item);
           request.onsuccess = () => resolve(item);
-          request.onerror = () => reject(request.error);
+          request.onerror = () => {
+            logIndexedDBError('importAllData.add.wordbooks', request.error);
+            reject(request.error);
+          };
         });
       }
     }
@@ -689,7 +841,10 @@ class VocabularyDB {
         await new Promise((resolve, reject) => {
           const request = store.add(item);
           request.onsuccess = () => resolve(item);
-          request.onerror = () => reject(request.error);
+          request.onerror = () => {
+            logIndexedDBError('importAllData.add.cards', request.error);
+            reject(request.error);
+          };
         });
       }
     }
@@ -701,7 +856,10 @@ class VocabularyDB {
         await new Promise((resolve, reject) => {
           const request = store.add(item);
           request.onsuccess = () => resolve(item);
-          request.onerror = () => reject(request.error);
+          request.onerror = () => {
+            logIndexedDBError('importAllData.add.card_stats', request.error);
+            reject(request.error);
+          };
         });
       }
     }
@@ -713,7 +871,10 @@ class VocabularyDB {
         await new Promise((resolve, reject) => {
           const request = store.add(item);
           request.onsuccess = () => resolve(item);
-          request.onerror = () => reject(request.error);
+          request.onerror = () => {
+            logIndexedDBError('importAllData.add.card_srs', request.error);
+            reject(request.error);
+          };
         });
       }
     }
@@ -725,7 +886,10 @@ class VocabularyDB {
         await new Promise((resolve, reject) => {
           const request = store.add(item);
           request.onsuccess = () => resolve(item);
-          request.onerror = () => reject(request.error);
+          request.onerror = () => {
+            logIndexedDBError('importAllData.add.daily_review_records', request.error);
+            reject(request.error);
+          };
         });
       }
     }
@@ -737,7 +901,10 @@ class VocabularyDB {
         await new Promise((resolve, reject) => {
           const request = store.add(item);
           request.onsuccess = () => resolve(item);
-          request.onerror = () => reject(request.error);
+          request.onerror = () => {
+            logIndexedDBError('importAllData.add.notifications', request.error);
+            reject(request.error);
+          };
         });
       }
     }

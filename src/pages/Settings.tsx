@@ -24,6 +24,7 @@ import { ImportWordbooksDialog } from "@/components/ImportWordbooksDialog";
 import { DisplayDirectionDialog } from "@/components/DisplayDirectionDialog";
 import { TTSSettingsDialog } from "@/components/TTSSettingsDialog";
 import { StudyRemindersDialog } from "@/components/StudyRemindersDialog";
+import { ReviewModeSelectionDialog } from "@/components/ReviewModeSelectionDialog"; // 引入 ReviewModeSelectionDialog
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -43,7 +44,7 @@ const Settings = () => {
   const [isRemindersDialogOpen, setIsRemindersDialogOpen] = useState(false);
   const [isImportConfirmOpen, setIsImportConfirmOpen] = useState(false);
   const [importData, setImportData] = useState<{ data: any; event: React.ChangeEvent<HTMLInputElement> } | null>(null);
-  const [isReviewModeChangeOpen, setIsReviewModeChangeOpen] = useState(false);
+  const [isReviewModeSelectionOpen, setIsReviewModeSelectionOpen] = useState(false); // 新增狀態來控制 ReviewModeSelectionDialog
 
   useEffect(() => {
     loadSettings();
@@ -73,32 +74,28 @@ const Settings = () => {
     }
   };
 
-  const handleReviewModeToggle = () => {
-    setIsReviewModeChangeOpen(true);
-  };
-
-  const confirmReviewModeChange = async () => {
+  const handleReviewModeSelect = async (mode: 'traditional' | 'srs') => {
     try {
-      const newMode = settings.review_mode === 'srs' ? 'traditional' : 'srs';
-      
-      // Reset SRS data: clear all card SRS records
-      const allWordbooks = await db.getAllWordbooks();
-      for (const wordbook of allWordbooks) {
-        const cards = await db.getCardsByWordbook(wordbook.id);
-        for (const card of cards) {
-          // Reset SRS to default values but keep stats (shown/right/wrong counts)
-          await db.createOrUpdateCardSRS(card.id, {
-            ease: 2.5,
-            interval_days: 1,
-            repetitions: 0,
-            due_at: new Date().toISOString(),
-          });
+      if (settings.review_mode !== mode) {
+        // Only reset SRS data if mode is actually changing
+        // Reset SRS data: clear all card SRS records
+        const allWordbooks = await db.getAllWordbooks();
+        for (const wordbook of allWordbooks) {
+          const cards = await db.getCardsByWordbook(wordbook.id);
+          for (const card of cards) {
+            // Reset SRS to default values but keep stats (shown/right/wrong counts)
+            await db.createOrUpdateCardSRS(card.id, {
+              ease: 2.5,
+              interval_days: 1,
+              repetitions: 0,
+              due_at: new Date().toISOString(),
+            });
+          }
         }
+        await updateSettings({ review_mode: mode });
+        toast.success(`已切換至${mode === 'srs' ? 'SRS' : '傳統'}模式，SRS 記錄已重置`);
       }
-      
-      await updateSettings({ review_mode: newMode });
-      setIsReviewModeChangeOpen(false);
-      toast.success(`已切換至${newMode === 'srs' ? 'SRS' : '傳統'}模式，SRS 記錄已重置`);
+      setIsReviewModeSelectionOpen(false);
     } catch (error) {
       console.error("Failed to change review mode:", error);
       toast.error("切換模式失敗");
@@ -112,10 +109,10 @@ const Settings = () => {
       
       // Parse to verify it's valid JSON
       const parsed = JSON.parse(data);
-      const totalItems = 
-        (parsed.wordbooks?.length || 0) + 
-        (parsed.cards?.length || 0) + 
-        (parsed.card_stats?.length || 0) + 
+      const totalItems =
+        (parsed.wordbooks?.length || 0) +
+        (parsed.cards?.length || 0) +
+        (parsed.card_stats?.length || 0) +
         (parsed.card_srs?.length || 0);
       
       const blob = new Blob([data], { type: 'application/json' });
@@ -250,7 +247,7 @@ const Settings = () => {
           <Card className="p-4">
             <button
               className="w-full flex items-center justify-between"
-              onClick={handleReviewModeToggle}
+              onClick={() => setIsReviewModeSelectionOpen(true)} // 修改為開啟 ReviewModeSelectionDialog
             >
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-background rounded-lg">
@@ -268,7 +265,7 @@ const Settings = () => {
           </Card>
 
           <Card className="p-4">
-            <button 
+            <button
               className="w-full flex items-center justify-between"
               onClick={() => setIsDisplayDirectionDialogOpen(true)}
             >
@@ -279,7 +276,7 @@ const Settings = () => {
                 <div className="text-left">
                   <p className="font-medium">顯示方向</p>
                   <p className="text-sm text-muted-foreground">
-                    {settings.display_direction === 'zh-en' ? '中文 → 英文' : 
+                    {settings.display_direction === 'zh-en' ? '中文 → 英文' :
                      settings.display_direction === 'random' ? '隨機' : '英文 → 中文'}
                   </p>
                 </div>
@@ -289,7 +286,7 @@ const Settings = () => {
           </Card>
 
           <Card className="p-4">
-            <button 
+            <button
               className="w-full flex items-center justify-between"
               onClick={() => setIsTTSDialogOpen(true)}
             >
@@ -314,7 +311,7 @@ const Settings = () => {
           <h2 className="text-sm font-semibold text-muted-foreground">通知</h2>
           
           <Card className="p-4">
-            <button 
+            <button
               className="w-full flex items-center justify-between"
               onClick={() => setIsRemindersDialogOpen(true)}
             >
@@ -389,7 +386,7 @@ const Settings = () => {
               className="hidden"
               id="import-backup"
             />
-            <button 
+            <button
               className="w-full flex items-center justify-between"
               onClick={() => document.getElementById('import-backup')?.click()}
             >
@@ -427,7 +424,7 @@ const Settings = () => {
           <h2 className="text-sm font-semibold text-muted-foreground">關於</h2>
           
           <Card className="p-4">
-            <button 
+            <button
               className="w-full flex items-center justify-between"
               onClick={() => navigate("/about")}
             >
@@ -520,7 +517,7 @@ const Settings = () => {
       />
 
       <AlertDialog open={isImportConfirmOpen} onOpenChange={setIsImportConfirmOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="sm:max-w-md max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto p-4">
           <AlertDialogHeader>
             <AlertDialogTitle>確認導入備份數據</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
@@ -555,33 +552,11 @@ const Settings = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={isReviewModeChangeOpen} onOpenChange={setIsReviewModeChangeOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>切換複習模式</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p>
-                你即將切換至
-                <span className="font-semibold">
-                  {settings.review_mode === 'srs' ? '傳統模式' : 'SRS 間隔重複模式'}
-                </span>
-              </p>
-              <p className="text-destructive font-semibold">
-                警告：切換模式後，所有 SRS 記錄將會重置！
-              </p>
-              <p>
-                你的卡片統計（已複習次數、正確/錯誤次數）將會保留，但 SRS 的間隔時間和到期日期將會重置為初始值。
-              </p>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmReviewModeChange}>
-              確認切換
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ReviewModeSelectionDialog // 渲染 ReviewModeSelectionDialog
+        open={isReviewModeSelectionOpen}
+        onOpenChange={setIsReviewModeSelectionOpen}
+        onSelect={handleReviewModeSelect}
+      />
 
       <BottomNav />
     </div>

@@ -36,7 +36,7 @@ export const ImportWordbooksDialog = ({
     const isCSV = file.name.endsWith(".csv");
 
     if (!isJSON && !isCSV) {
-      toast.error("請選擇 JSON 或 CSV 文件");
+      toast.error("請選擇 JSON 或 CSV 檔案");
       return;
     }
 
@@ -50,12 +50,12 @@ export const ImportWordbooksDialog = ({
 
         // Validate JSON structure
         if (!data.wordbooks || !Array.isArray(data.wordbooks)) {
-          toast.error("無效的 JSON 格式：缺少 wordbooks 資料");
+          toast.error("無效的 JSON 格式：缺少單詞書資料");
           return;
         }
 
         if (data.wordbooks.length === 0) {
-          toast.error("JSON 文件中沒有單詞書資料");
+          toast.error("JSON 檔案中沒有單詞書資料");
           return;
         }
 
@@ -63,7 +63,7 @@ export const ImportWordbooksDialog = ({
         const wordbookCards = data.cards?.filter((card: any) => card.wordbook_id === wordbook.id) || [];
 
         if (wordbookCards.length === 0) {
-          toast.error("JSON 文件中沒有單字卡資料");
+          toast.error("JSON 檔案中沒有單字卡資料");
           return;
         }
 
@@ -116,13 +116,13 @@ export const ImportWordbooksDialog = ({
           }
         }
 
-        toast.success(`成功導入單詞書「${newWordbook.name}」，包含 ${successCount} 張卡片`);
+        toast.success(`成功匯入單詞書「${newWordbook.name}」，包含 ${successCount} 張卡片`);
       } else {
         // Handle CSV format
         const rows = parseCSV(text);
 
         if (rows.length === 0) {
-          toast.error("CSV 文件為空");
+          toast.error("CSV 檔案為空");
           return;
         }
 
@@ -159,14 +159,14 @@ export const ImportWordbooksDialog = ({
           }
         }
 
-        toast.success(`成功導入 ${successCount} 張卡片到「${wordbookName}」`);
+        toast.success(`成功匯入 ${successCount} 張卡片到「${wordbookName}」`);
       }
 
       onSuccess();
       onOpenChange(false);
     } catch (error) {
       console.error("Import error:", error);
-      toast.error("導入失敗：" + (error instanceof Error ? error.message : "請檢查文件格式"));
+      toast.error("匯入失敗：" + (error instanceof Error ? error.message : "請檢查檔案格式"));
     } finally {
       setIsImporting(false);
       event.target.value = ''; // Clear file input
@@ -175,16 +175,16 @@ export const ImportWordbooksDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-md max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto p-4">
         <DialogHeader>
           <DialogTitle>匯入單詞書</DialogTitle>
           <DialogDescription>
-            上傳 JSON 或 CSV 文件以匯入單詞書
+            上傳 JSON 或 CSV 檔案以匯入單詞書
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label>支援的文件格式</Label>
+            <Label>支援的檔案格式</Label>
             <div className="text-xs text-muted-foreground space-y-1">
               <p><strong>JSON 格式：</strong>從單詞書設定中匯出的完整備份檔案（包含學習記錄）</p>
               <p><strong>CSV 格式：</strong>簡單的單字列表</p>
@@ -193,7 +193,7 @@ export const ImportWordbooksDialog = ({
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="import-file">選擇文件</Label>
+            <Label htmlFor="import-file">選擇檔案</Label>
             <Input
               id="import-file"
               type="file"

@@ -25,13 +25,13 @@ interface StudyRemindersDialogProps {
 }
 
 const WEEKDAYS = [
-  { id: "mon", label: "Mon" },
-  { id: "tue", label: "Tue" },
-  { id: "wed", label: "Wed" },
-  { id: "thu", label: "Thu" },
-  { id: "fri", label: "Fri" },
-  { id: "sat", label: "Sat" },
-  { id: "sun", label: "Sun" },
+  { id: "mon", label: "週一" },
+  { id: "tue", label: "週二" },
+  { id: "wed", label: "週三" },
+  { id: "thu", label: "週四" },
+  { id: "fri", label: "週五" },
+  { id: "sat", label: "週六" },
+  { id: "sun", label: "週日" },
 ];
 
 export function StudyRemindersDialog({
@@ -59,19 +59,19 @@ export function StudyRemindersDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-md max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto p-4">
         <DialogHeader>
-          <DialogTitle>Study Reminders</DialogTitle>
+          <DialogTitle>學習提醒</DialogTitle>
           <DialogDescription>
-            Get notified when it's time to review your vocabulary
+            在該複習單字時收到通知
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-6 py-4">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label>Enable Reminders</Label>
+              <Label>啟用提醒</Label>
               <p className="text-sm text-muted-foreground">
-                Receive daily study notifications
+                接收每日學習通知
               </p>
             </div>
             <Switch checked={enabled} onCheckedChange={setEnabled} />
@@ -80,7 +80,7 @@ export function StudyRemindersDialog({
           {enabled && (
             <>
               <div className="space-y-2">
-                <Label htmlFor="reminder-time">Reminder Time</Label>
+                <Label htmlFor="reminder-time">提醒時間</Label>
                 <Input
                   id="reminder-time"
                   type="time"
@@ -90,7 +90,7 @@ export function StudyRemindersDialog({
               </div>
 
               <div className="space-y-3">
-                <Label>Repeat On</Label>
+                <Label>重複</Label>
                 <div className="flex gap-2 flex-wrap">
                   {WEEKDAYS.map((day) => (
                     <Button
@@ -107,10 +107,10 @@ export function StudyRemindersDialog({
               </div>
 
               <div className="text-sm text-muted-foreground bg-muted p-3 rounded-md">
-                <p className="font-medium mb-1">Note:</p>
+                <p className="font-medium mb-1">注意：</p>
                 <p>
-                  Browser notifications need to be enabled in your device settings.
-                  You'll be prompted to allow notifications when you save these settings.
+                  瀏覽器通知需要在你的設備設定中啟用。
+                  當你保存這些設定時，將會提示你允許通知。
                 </p>
               </div>
             </>
@@ -118,9 +118,9 @@ export function StudyRemindersDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            取消
           </Button>
-          <Button onClick={handleSave}>Save</Button>
+          <Button onClick={handleSave}>儲存</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

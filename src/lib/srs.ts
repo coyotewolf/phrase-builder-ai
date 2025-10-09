@@ -26,7 +26,7 @@ export interface SRSResult {
  */
 export function calculateNextReview(
   currentState: SRSState,
-  quality: number
+  quality: Quality
 ): SRSResult {
   const { ease, interval_days, repetitions } = currentState;
 
@@ -36,7 +36,7 @@ export function calculateNextReview(
       ease: Math.max(1.3, ease - 0.2),
       interval_days: 1,
       repetitions: 0,
-      due_at: addDays(new Date(), 1).toISOString(),
+      due_at: addDays(startOfDay(new Date()), 1).toISOString(),
     };
   }
 
@@ -57,7 +57,7 @@ export function calculateNextReview(
   }
 
   // Calculate due date
-  const dueDate = addDays(new Date(), newInterval);
+  const dueDate = addDays(startOfDay(new Date()), newInterval);
 
   return {
     ease: newEase,
@@ -77,6 +77,15 @@ export function isDue(dueAt: string): boolean {
 }
 
 /**
+ * Helper function to get the start of the day for a given date
+ */
+function startOfDay(date: Date): Date {
+  const result = new Date(date);
+  result.setHours(0, 0, 0, 0);
+  return result;
+}
+
+/**
  * Helper function to add days to a date
  */
 function addDays(date: Date, days: number): Date {
@@ -87,12 +96,18 @@ function addDays(date: Date, days: number): Date {
 
 /**
  * Convert user answer to quality score
- * @param correct - Whether the user got it right
+ * @param quality - Quality of recall (0-5, where 0 is complete blackout, 5 is perfect recall)
  * @returns Quality score (0-5)
  */
-export function answerToQuality(correct: boolean): number {
-  // Simple conversion: correct = 5 (perfect), incorrect = 2 (hard to recall)
-  return correct ? 5 : 2;
+export type Quality = 0 | 1 | 2 | 3 | 4 | 5;
+
+/**
+ * Convert user answer to quality score
+ * @param quality - Quality of recall (0-5, where 0 is complete blackout, 5 is perfect recall)
+ * @returns Quality score (0-5)
+ */
+export function answerToQuality(quality: Quality): Quality {
+  return quality;
 }
 
 /**

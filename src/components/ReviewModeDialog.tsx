@@ -24,7 +24,7 @@ export function ReviewModeDialog({
 }: ReviewModeDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-md max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto p-4">
         <DialogHeader>
           <DialogTitle>選擇複習模式</DialogTitle>
           <DialogDescription>

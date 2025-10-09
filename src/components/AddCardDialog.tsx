@@ -141,11 +141,11 @@ export function AddCardDialog({
       if (!open) resetForm();
       onOpenChange(open);
     }}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-md max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto p-4">
         <DialogHeader>
           <DialogTitle>新增單字卡</DialogTitle>
           <DialogDescription>
-            輸入單字詳細資訊，支持多詞性分組
+            輸入單字詳細資訊，支援多詞性分組
           </DialogDescription>
         </DialogHeader>
         

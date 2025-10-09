@@ -296,7 +296,7 @@ const Wordbooks = () => {
         )}
 
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogContent>
+          <DialogContent className="sm:max-w-md max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto p-4">
             <DialogHeader>
               <DialogTitle>創建新單詞書</DialogTitle>
               <DialogDescription>
@@ -380,7 +380,7 @@ const Wordbooks = () => {
         />
 
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-          <AlertDialogContent>
+          <AlertDialogContent className="sm:max-w-md max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto p-4">
             <AlertDialogHeader>
               <AlertDialogTitle>確認刪除單詞書</AlertDialogTitle>
               <AlertDialogDescription>
@@ -391,7 +391,7 @@ const Wordbooks = () => {
               <AlertDialogCancel onClick={() => setWordbookToDelete(null)}>
                 取消
               </AlertDialogCancel>
-              <AlertDialogAction 
+              <AlertDialogAction
                 onClick={handleDeleteWordbook}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >

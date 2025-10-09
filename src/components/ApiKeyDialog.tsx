@@ -33,25 +33,25 @@ export const ApiKeyDialog = ({ open, onOpenChange, currentApiKey, onSave }: ApiK
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-md max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto p-4">
         <DialogHeader>
-          <DialogTitle>Gemini API Key</DialogTitle>
+          <DialogTitle>Gemini API 金鑰</DialogTitle>
           <DialogDescription>
-            Enter your Google Gemini API key to enable AI features
+            輸入你的 Google Gemini API 金鑰以啟用 AI 功能
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="apiKey">API Key</Label>
+            <Label htmlFor="apiKey">API 金鑰</Label>
             <Input
               id="apiKey"
               type="password"
-              placeholder="Enter your Gemini API key"
+              placeholder="輸入你的 Gemini API 金鑰"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              Get your API key from{" "}
+              從{" "}
               <a
                 href="https://aistudio.google.com/app/apikey"
                 target="_blank"
@@ -60,15 +60,16 @@ export const ApiKeyDialog = ({ open, onOpenChange, currentApiKey, onSave }: ApiK
               >
                 Google AI Studio
               </a>
+              取得你的 API 金鑰
             </p>
           </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            取消
           </Button>
           <Button onClick={handleSave} disabled={!apiKey.trim()}>
-            Save
+            儲存
           </Button>
         </DialogFooter>
       </DialogContent>

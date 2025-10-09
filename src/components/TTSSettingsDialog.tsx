@@ -46,19 +46,19 @@ export function TTSSettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-md max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto p-4">
         <DialogHeader>
-          <DialogTitle>Text-to-Speech Settings</DialogTitle>
+          <DialogTitle>語音播放設定</DialogTitle>
           <DialogDescription>
-            Configure voice pronunciation for your vocabulary learning
+            設定單字學習的語音發音
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-6 py-4">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label>Enable TTS</Label>
+              <Label>啟用語音播放</Label>
               <p className="text-sm text-muted-foreground">
-                Turn on voice pronunciation
+                開啟語音發音
               </p>
             </div>
             <Switch checked={enabled} onCheckedChange={setEnabled} />
@@ -67,13 +67,13 @@ export function TTSSettingsDialog({
           {enabled && (
             <>
               <div className="space-y-3">
-                <Label>Voice Accent</Label>
+                <Label>語音腔調</Label>
                 <RadioGroup value={voice} onValueChange={setVoice}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="en-US" id="en-US" />
                       <Label htmlFor="en-US" className="cursor-pointer">
-                        American English
+                        美式英文
                       </Label>
                     </div>
                     <Button
@@ -88,7 +88,7 @@ export function TTSSettingsDialog({
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="en-GB" id="en-GB" />
                       <Label htmlFor="en-GB" className="cursor-pointer">
-                        British English
+                        英式英文
                       </Label>
                     </div>
                     <Button
@@ -104,9 +104,9 @@ export function TTSSettingsDialog({
 
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label>Auto-play</Label>
+                  <Label>自動播放</Label>
                   <p className="text-sm text-muted-foreground">
-                    Play pronunciation automatically when card shows
+                    卡片顯示時自動播放發音
                   </p>
                 </div>
                 <Switch checked={autoPlay} onCheckedChange={setAutoPlay} />
@@ -116,9 +116,9 @@ export function TTSSettingsDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            取消
           </Button>
-          <Button onClick={handleSave}>Save</Button>
+          <Button onClick={handleSave}>儲存</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
