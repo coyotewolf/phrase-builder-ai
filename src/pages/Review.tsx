@@ -285,6 +285,16 @@ const Review = () => {
           setIsAnimating(false);
         }, 50);
       } else {
+        // 完成複習會話 - 創建通知
+        const reviewedCount = cards.length;
+        
+        await db.createNotification({
+          title: "🎉 複習完成！",
+          message: `太棒了！你剛完成了 ${reviewedCount} 張卡片的複習，繼續保持！`,
+          type: "review",
+          read: false,
+        });
+        
         toast.success("複習完成！");
         navigate("/");
       }

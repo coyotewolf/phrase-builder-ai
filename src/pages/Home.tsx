@@ -178,6 +178,21 @@ const Home = () => {
       setTotalWords(total);
       setDueCount(dueCardsCount);
 
+      // 檢查每日目標達成 - 創建通知
+      const lastGoalNotificationKey = 'lastGoalNotificationDate';
+      const today_str = today.toISOString().split('T')[0];
+      const lastGoalDate = localStorage.getItem(lastGoalNotificationKey);
+      
+      if (count >= dailyGoal && count > 0 && lastGoalDate !== today_str) {
+        await db.createNotification({
+          title: "🎯 每日目標達成！",
+          message: `恭喜！你今天已完成 ${count} 張卡片，達成了每日目標 ${dailyGoal} 張！`,
+          type: "goal",
+          read: false,
+        });
+        localStorage.setItem(lastGoalNotificationKey, today_str);
+      }
+
       // Calculate streak using daily review records
       const dailyRecords = await db.getAllDailyReviewRecords();
       let streak = 0;
@@ -194,6 +209,24 @@ const Home = () => {
       }
       
       setStreakDays(streak);
+      
+      // 檢查連續學習天數里程碑 - 創建通知
+      const lastStreakNotificationKey = 'lastStreakNotification';
+      const lastStreakMilestone = parseInt(localStorage.getItem(lastStreakNotificationKey) || '0');
+      const milestones = [7, 14, 30, 50, 100, 200, 365];
+      
+      for (const milestone of milestones) {
+        if (streak >= milestone && lastStreakMilestone < milestone) {
+          await db.createNotification({
+            title: "🔥 連續學習里程碑！",
+            message: `太厲害了！你已經連續學習 ${streak} 天，持之以恆必有收穫！`,
+            type: "streak",
+            read: false,
+          });
+          localStorage.setItem(lastStreakNotificationKey, milestone.toString());
+          break; // 只通知最近的一個里程碑
+        }
+      }
     } catch (error) {
       console.error("Failed to load stats:", error);
     }

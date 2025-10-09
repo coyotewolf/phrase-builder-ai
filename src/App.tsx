@@ -16,6 +16,7 @@ import AllErrorCards from "./pages/AllErrorCards";
 import Settings from "./pages/Settings";
 import Review from "./pages/Review";
 import About from "./pages/About";
+import SRSIntroduction from "./pages/SRSIntroduction";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,7 @@ const App = () => (
           <Route path="/settings" element={<Settings />} />
           <Route path="/review" element={<Review />} />
           <Route path="/about" element={<About />} />
+          <Route path="/srs-introduction" element={<SRSIntroduction />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
