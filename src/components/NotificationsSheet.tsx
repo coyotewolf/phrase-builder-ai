@@ -2,6 +2,9 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Button } from "@/components/ui/button";
 import { Bell, CheckCheck } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { db, Notification } from "@/lib/db";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 interface NotificationsSheetProps {
   open: boolean;
@@ -9,30 +12,50 @@ interface NotificationsSheetProps {
 }
 
 export function NotificationsSheet({ open, onOpenChange }: NotificationsSheetProps) {
-  // Placeholder notifications - in a real app, these would come from state/API
-  const notifications = [
-    {
-      id: 1,
-      title: "該複習了！",
-      message: "你今天有 15 張卡片待複習",
-      time: "2 小時前",
-      read: false,
-    },
-    {
-      id: 2,
-      title: "達成每日目標！",
-      message: "恭喜！你已完成今日 100 個單字的目標",
-      time: "1 天前",
-      read: true,
-    },
-    {
-      id: 3,
-      title: "新增單詞書",
-      message: "托福詞彙已加入你的收藏",
-      time: "2 天前",
-      read: true,
-    },
-  ];
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+
+  useEffect(() => {
+    if (open) {
+      loadNotifications();
+    }
+  }, [open]);
+
+  const loadNotifications = async () => {
+    try {
+      const allNotifications = await db.getAllNotifications();
+      setNotifications(allNotifications);
+    } catch (error) {
+      console.error("Failed to load notifications:", error);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await db.markAllNotificationsAsRead();
+      await loadNotifications();
+      toast.success("所有通知已標記為已讀");
+    } catch (error) {
+      console.error("Failed to mark notifications as read:", error);
+      toast.error("操作失敗");
+    }
+  };
+
+  const getTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 60) {
+      return diffMins === 0 ? "剛剛" : `${diffMins} 分鐘前`;
+    } else if (diffHours < 24) {
+      return `${diffHours} 小時前`;
+    } else {
+      return `${diffDays} 天前`;
+    }
+  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -67,7 +90,9 @@ export function NotificationsSheet({ open, onOpenChange }: NotificationsSheetPro
                   <p className="text-sm text-muted-foreground mb-2">
                     {notification.message}
                   </p>
-                  <p className="text-xs text-muted-foreground">{notification.time}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {getTimeAgo(notification.created_at)}
+                  </p>
                 </div>
               ))}
             </div>
@@ -75,7 +100,7 @@ export function NotificationsSheet({ open, onOpenChange }: NotificationsSheetPro
         </ScrollArea>
         {notifications.length > 0 && (
           <div className="absolute bottom-6 left-6 right-6">
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full" onClick={handleMarkAllAsRead}>
               <CheckCheck className="h-4 w-4 mr-2" />
               全部標記為已讀
             </Button>

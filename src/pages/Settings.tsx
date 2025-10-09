@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, Target, Globe, Volume2, Bell, Upload, Download, Info, Key } from "lucide-react";
+import { ChevronRight, Target, Globe, Volume2, Bell, Upload, Download, Info, Key, Brain } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,6 +32,7 @@ const Settings = () => {
     daily_goal: 100,
     theme: 'dark',
     tts_enabled: true,
+    review_mode: 'traditional',
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isDailyGoalDialogOpen, setIsDailyGoalDialogOpen] = useState(false);
@@ -42,6 +43,7 @@ const Settings = () => {
   const [isRemindersDialogOpen, setIsRemindersDialogOpen] = useState(false);
   const [isImportConfirmOpen, setIsImportConfirmOpen] = useState(false);
   const [importData, setImportData] = useState<{ data: any; event: React.ChangeEvent<HTMLInputElement> } | null>(null);
+  const [isReviewModeChangeOpen, setIsReviewModeChangeOpen] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -68,6 +70,38 @@ const Settings = () => {
     } catch (error) {
       console.error("Failed to update settings:", error);
       toast.error("保存設置失敗");
+    }
+  };
+
+  const handleReviewModeToggle = () => {
+    setIsReviewModeChangeOpen(true);
+  };
+
+  const confirmReviewModeChange = async () => {
+    try {
+      const newMode = settings.review_mode === 'srs' ? 'traditional' : 'srs';
+      
+      // Reset SRS data: clear all card SRS records
+      const allWordbooks = await db.getAllWordbooks();
+      for (const wordbook of allWordbooks) {
+        const cards = await db.getCardsByWordbook(wordbook.id);
+        for (const card of cards) {
+          // Reset SRS to default values but keep stats (shown/right/wrong counts)
+          await db.createOrUpdateCardSRS(card.id, {
+            ease: 2.5,
+            interval_days: 1,
+            repetitions: 0,
+            due_at: new Date().toISOString(),
+          });
+        }
+      }
+      
+      await updateSettings({ review_mode: newMode });
+      setIsReviewModeChangeOpen(false);
+      toast.success(`已切換至${newMode === 'srs' ? 'SRS' : '傳統'}模式，SRS 記錄已重置`);
+    } catch (error) {
+      console.error("Failed to change review mode:", error);
+      toast.error("切換模式失敗");
     }
   };
 
@@ -207,6 +241,26 @@ const Settings = () => {
                 <div className="text-left">
                   <p className="font-medium">每日目標</p>
                   <p className="text-sm text-muted-foreground">每天 {settings.daily_goal} 個單字</p>
+                </div>
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+            </button>
+          </Card>
+
+          <Card className="p-4">
+            <button
+              className="w-full flex items-center justify-between"
+              onClick={handleReviewModeToggle}
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-background rounded-lg">
+                  <Brain className="h-5 w-5" />
+                </div>
+                <div className="text-left">
+                  <p className="font-medium">複習模式</p>
+                  <p className="text-sm text-muted-foreground">
+                    {settings.review_mode === 'srs' ? 'SRS 間隔重複' : '傳統模式（前一天）'}
+                  </p>
                 </div>
               </div>
               <ChevronRight className="h-5 w-5 text-muted-foreground" />
@@ -471,27 +525,59 @@ const Settings = () => {
             <AlertDialogTitle>確認導入備份數據</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <p>即將導入以下備份數據：</p>
-              <ul className="list-disc list-inside space-y-1 text-foreground">
-                <li>{importData?.data.wordbooks?.length || 0} 個單詞書</li>
-                <li>{importData?.data.cards?.length || 0} 張卡片</li>
-              </ul>
-              <p className="text-destructive font-semibold pt-2">
-                ⚠️ 警告：這將覆蓋當前所有數據！
+              {importData && importData.data && (
+                <div className="bg-muted p-3 rounded-lg text-sm space-y-1">
+                  <p>• 單詞書：{importData.data.wordbooks?.length || 0} 個</p>
+                  <p>• 卡片：{importData.data.cards?.length || 0} 張</p>
+                  <p>• 統計數據：{importData.data.card_stats?.length || 0} 筆</p>
+                  <p>• SRS 記錄：{importData.data.card_srs?.length || 0} 筆</p>
+                </div>
+              )}
+              <p className="text-destructive font-semibold">
+                警告：這將清除所有現有數據！
               </p>
+              <p>請確保你已經導出並保存了當前的數據備份。</p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => {
-              toast.info("已取消導入");
-              if (importData?.event.target) {
-                importData.event.target.value = '';
-              }
               setImportData(null);
             }}>
               取消
             </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmImport}>
+            <AlertDialogAction
+              onClick={confirmImport}
+              className="bg-destructive hover:bg-destructive/90"
+            >
               確認導入
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={isReviewModeChangeOpen} onOpenChange={setIsReviewModeChangeOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>切換複習模式</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                你即將切換至
+                <span className="font-semibold">
+                  {settings.review_mode === 'srs' ? '傳統模式' : 'SRS 間隔重複模式'}
+                </span>
+              </p>
+              <p className="text-destructive font-semibold">
+                警告：切換模式後，所有 SRS 記錄將會重置！
+              </p>
+              <p>
+                你的卡片統計（已複習次數、正確/錯誤次數）將會保留，但 SRS 的間隔時間和到期日期將會重置為初始值。
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmReviewModeChange}>
+              確認切換
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

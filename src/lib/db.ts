@@ -79,6 +79,17 @@ export interface UserSettings {
   reminder_time?: string;
   reminder_days?: string[];
   gemini_api_key?: string;
+  review_mode?: 'traditional' | 'srs'; // Traditional = yesterday review, SRS = spaced repetition
+}
+
+export interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: 'review' | 'goal' | 'wordbook' | 'streak' | 'system';
+  read: boolean;
+  created_at: string;
+  related_data?: any; // Optional data like wordbook_id, card count, etc.
 }
 
 export interface DailyReviewRecord {
@@ -93,7 +104,7 @@ export interface DailyReviewRecord {
 }
 
 const DB_NAME = 'vocabulary_flow';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 class VocabularyDB {
   private db: IDBDatabase | null = null;
@@ -147,6 +158,13 @@ class VocabularyDB {
         if (oldVersion < 2 && !db.objectStoreNames.contains('daily_review_records')) {
           const dailyStore = db.createObjectStore('daily_review_records', { keyPath: 'id' });
           dailyStore.createIndex('date', 'date', { unique: true });
+        }
+
+        // Notifications store (Version 3)
+        if (oldVersion < 3 && !db.objectStoreNames.contains('notifications')) {
+          const notifStore = db.createObjectStore('notifications', { keyPath: 'id' });
+          notifStore.createIndex('created_at', 'created_at');
+          notifStore.createIndex('read', 'read');
         }
       };
     });
@@ -489,13 +507,95 @@ class VocabularyDB {
     });
   }
 
+  // Notifications
+  async getAllNotifications(): Promise<Notification[]> {
+    const store = await this.getStore('notifications');
+    return new Promise((resolve, reject) => {
+      const request = store.getAll();
+      request.onsuccess = () => {
+        const results = request.result;
+        // Sort by created_at descending
+        results.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        resolve(results);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getUnreadNotifications(): Promise<Notification[]> {
+    const all = await this.getAllNotifications();
+    return all.filter(n => !n.read);
+  }
+
+  async createNotification(notification: Omit<Notification, 'id' | 'created_at'>): Promise<Notification> {
+    const store = await this.getStore('notifications', 'readwrite');
+    const newNotification: Notification = {
+      id: crypto.randomUUID(),
+      ...notification,
+      created_at: new Date().toISOString(),
+    };
+    return new Promise((resolve, reject) => {
+      const request = store.add(newNotification);
+      request.onsuccess = () => resolve(newNotification);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async markNotificationAsRead(id: string): Promise<void> {
+    const store = await this.getStore('notifications', 'readwrite');
+    return new Promise((resolve, reject) => {
+      const getRequest = store.get(id);
+      getRequest.onsuccess = () => {
+        const notification = getRequest.result;
+        if (notification) {
+          notification.read = true;
+          const putRequest = store.put(notification);
+          putRequest.onsuccess = () => resolve();
+          putRequest.onerror = () => reject(putRequest.error);
+        } else {
+          resolve();
+        }
+      };
+      getRequest.onerror = () => reject(getRequest.error);
+    });
+  }
+
+  async markAllNotificationsAsRead(): Promise<void> {
+    const store = await this.getStore('notifications', 'readwrite');
+    const all = await this.getAllNotifications();
+    
+    return new Promise((resolve, reject) => {
+      const promises = all.map(notification => {
+        notification.read = true;
+        return new Promise<void>((res, rej) => {
+          const request = store.put(notification);
+          request.onsuccess = () => res();
+          request.onerror = () => rej(request.error);
+        });
+      });
+      
+      Promise.all(promises)
+        .then(() => resolve())
+        .catch(reject);
+    });
+  }
+
+  async deleteNotification(id: string): Promise<void> {
+    const store = await this.getStore('notifications', 'readwrite');
+    return new Promise((resolve, reject) => {
+      const request = store.delete(id);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
   // Export all data
   async exportAllData(): Promise<string> {
     await this.init();
     
     // Open a single transaction for all reads to prevent transaction timeout
     const transaction = this.db!.transaction(
-      ['wordbooks', 'cards', 'card_stats', 'card_srs', 'daily_review_records'],
+      ['wordbooks', 'cards', 'card_stats', 'card_srs', 'daily_review_records', 'notifications'],
       'readonly'
     );
     
@@ -504,9 +604,10 @@ class VocabularyDB {
     const statsStore = transaction.objectStore('card_stats');
     const srsStore = transaction.objectStore('card_srs');
     const dailyStore = transaction.objectStore('daily_review_records');
+    const notifStore = transaction.objectStore('notifications');
 
     // Get all data using the same transaction
-    const [wordbooks, cards, cardStats, cardSrs, dailyRecords] = await Promise.all([
+    const [wordbooks, cards, cardStats, cardSrs, dailyRecords, notifications] = await Promise.all([
       new Promise<Wordbook[]>((resolve, reject) => {
         const request = wordbookStore.getAll();
         request.onsuccess = () => resolve(request.result);
@@ -531,16 +632,22 @@ class VocabularyDB {
         const request = dailyStore.getAll();
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
+      }),
+      new Promise<Notification[]>((resolve, reject) => {
+        const request = notifStore.getAll();
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
       })
     ]);
 
     const data = {
-      version: 2,
+      version: 3,
       wordbooks,
       cards,
       card_stats: cardStats,
       card_srs: cardSrs,
       daily_review_records: dailyRecords,
+      notifications,
       settings: await this.getUserSettings(),
       exported_at: new Date().toISOString(),
     };
@@ -553,7 +660,7 @@ class VocabularyDB {
     const data = JSON.parse(jsonData);
 
     // Clear existing data
-    const stores = ['wordbooks', 'cards', 'card_stats', 'card_srs', 'daily_review_records'];
+    const stores = ['wordbooks', 'cards', 'card_stats', 'card_srs', 'daily_review_records', 'notifications'];
     for (const storeName of stores) {
       const store = await this.getStore(storeName, 'readwrite');
       await new Promise<void>((resolve, reject) => {
@@ -615,6 +722,18 @@ class VocabularyDB {
     if (data.daily_review_records) {
       const store = await this.getStore('daily_review_records', 'readwrite');
       for (const item of data.daily_review_records) {
+        await new Promise((resolve, reject) => {
+          const request = store.add(item);
+          request.onsuccess = () => resolve(item);
+          request.onerror = () => reject(request.error);
+        });
+      }
+    }
+
+    // Import notifications
+    if (data.notifications) {
+      const store = await this.getStore('notifications', 'readwrite');
+      for (const item of data.notifications) {
         await new Promise((resolve, reject) => {
           const request = store.add(item);
           request.onsuccess = () => resolve(item);

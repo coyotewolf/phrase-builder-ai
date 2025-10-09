@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ErrorCardsFilterDialog } from "@/components/ErrorCardsFilterDialog";
+import { ReviewModeSelectionDialog } from "@/components/ReviewModeSelectionDialog";
 import {
   Dialog,
   DialogContent,
@@ -31,15 +32,60 @@ const Home = () => {
   const [selectedWordbooks, setSelectedWordbooks] = useState<string[]>([]);
   const [showWordbookSelector, setShowWordbookSelector] = useState(false);
   const [isErrorFilterDialogOpen, setIsErrorFilterDialogOpen] = useState(false);
+  const [showReviewModeSelection, setShowReviewModeSelection] = useState(false);
+  const [reviewMode, setReviewMode] = useState<'traditional' | 'srs'>('traditional');
 
   useEffect(() => {
     loadWordbooks();
     loadStats();
+    loadReviewMode();
   }, []);
 
   useEffect(() => {
     loadStats();
   }, [selectedWordbooks]);
+
+  const loadReviewMode = async () => {
+    try {
+      const settings = await db.getUserSettings();
+      setReviewMode(settings.review_mode || 'traditional');
+    } catch (error) {
+      console.error("Failed to load review mode:", error);
+    }
+  };
+
+  const handleReviewModeSelect = async (mode: 'traditional' | 'srs') => {
+    try {
+      await db.updateUserSettings({ review_mode: mode });
+      setReviewMode(mode);
+      
+      // Navigate to review page based on selected mode
+      if (mode === 'srs') {
+        navigate("/review?mode=due");
+      } else {
+        navigate("/review?mode=yesterday");
+      }
+    } catch (error) {
+      console.error("Failed to update review mode:", error);
+    }
+  };
+
+  const handleDueReviewClick = async () => {
+    const settings = await db.getUserSettings();
+    
+    // Check if user has selected a review mode before
+    if (!settings.review_mode) {
+      // First time - show selection dialog
+      setShowReviewModeSelection(true);
+    } else {
+      // Navigate based on saved preference
+      if (settings.review_mode === 'srs') {
+        navigate("/review?mode=due");
+      } else {
+        navigate("/review?mode=yesterday");
+      }
+    }
+  };
 
   const loadWordbooks = async () => {
     try {
@@ -72,6 +118,7 @@ const Home = () => {
     try {
       const settings = await db.getUserSettings();
       setDailyGoal(settings.daily_goal);
+      const currentReviewMode = settings.review_mode || 'traditional';
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -89,7 +136,7 @@ const Home = () => {
       
       let count = 0;
       let total = 0;
-      let yesterdayCardsCount = 0;
+      let dueCardsCount = 0;
       
       for (const wordbook of targetWordbooks) {
         const cards = await db.getCardsByWordbook(wordbook.id);
@@ -97,15 +144,27 @@ const Home = () => {
         
         for (const card of cards) {
           const stats = await db.getCardStats(card.id);
+          
+          // Count due cards based on review mode
+          if (currentReviewMode === 'srs') {
+            // SRS mode: count cards that are due according to SRS
+            const srs = await db.getCardSRS(card.id);
+            if (srs && new Date(srs.due_at) <= new Date()) {
+              dueCardsCount++;
+            }
+          } else {
+            // Traditional mode: count cards reviewed yesterday
+            if (stats?.last_reviewed_at) {
+              const reviewDate = new Date(stats.last_reviewed_at);
+              if (reviewDate >= yesterday && reviewDate <= yesterdayEnd) {
+                dueCardsCount++;
+              }
+            }
+          }
+          
+          // Count today's reviewed cards
           if (stats?.last_reviewed_at) {
             const reviewDate = new Date(stats.last_reviewed_at);
-            
-            // Count yesterday's reviewed cards for due count
-            if (reviewDate >= yesterday && reviewDate <= yesterdayEnd) {
-              yesterdayCardsCount++;
-            }
-            
-            // Count today's reviewed cards
             const todayReviewDate = new Date(reviewDate);
             todayReviewDate.setHours(0, 0, 0, 0);
             if (todayReviewDate.getTime() === today.getTime()) {
@@ -117,7 +176,7 @@ const Home = () => {
       
       setTodayCompleted(count);
       setTotalWords(total);
-      setDueCount(yesterdayCardsCount);
+      setDueCount(dueCardsCount);
 
       // Calculate streak using daily review records
       const dailyRecords = await db.getAllDailyReviewRecords();
@@ -234,7 +293,7 @@ const Home = () => {
           
           <Card
             className="p-6 cursor-pointer hover:bg-muted/50 transition-colors"
-            onClick={() => navigate("/review?mode=yesterday")}
+            onClick={handleDueReviewClick}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -243,7 +302,11 @@ const Home = () => {
                 </div>
                 <div>
                   <h3 className="text-xl font-semibold">待複習</h3>
-                  <p className="text-muted-foreground">複習昨天的 {dueCount} 張卡片</p>
+                  <p className="text-muted-foreground">
+                    {reviewMode === 'srs' 
+                      ? `複習到期的 ${dueCount} 張卡片` 
+                      : `複習昨天的 ${dueCount} 張卡片`}
+                  </p>
                 </div>
               </div>
               <Play className="h-6 w-6 text-muted-foreground" />
@@ -327,6 +390,11 @@ const Home = () => {
       <SideMenu open={isMenuOpen} onOpenChange={setIsMenuOpen} />
       <NotificationsSheet open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen} />
       <ErrorCardsFilterDialog open={isErrorFilterDialogOpen} onOpenChange={setIsErrorFilterDialogOpen} />
+      <ReviewModeSelectionDialog 
+        open={showReviewModeSelection} 
+        onOpenChange={setShowReviewModeSelection}
+        onSelect={handleReviewModeSelect}
+      />
       <BottomNav />
     </div>
   );
