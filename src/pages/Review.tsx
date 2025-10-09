@@ -108,7 +108,9 @@ const Review = () => {
           const dueCards = await Promise.all(
             allCards.map(async (card) => {
               const srs = await db.getCardSRS(card.id);
-              return srs && new Date(srs.due_at) <= new Date() ? card : null;
+              // Include cards that are due OR cards without SRS records (new cards)
+              if (!srs) return card;
+              return new Date(srs.due_at) <= new Date() ? card : null;
             })
           );
           filteredCards = dueCards.filter((c): c is VocabCard => c !== null);

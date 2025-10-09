@@ -147,9 +147,9 @@ const Home = () => {
           
           // Count due cards based on review mode
           if (currentReviewMode === 'srs') {
-            // SRS mode: count cards that are due according to SRS
+            // SRS mode: count cards that are due according to SRS (including new cards without SRS records)
             const srs = await db.getCardSRS(card.id);
-            if (srs && new Date(srs.due_at) <= new Date()) {
+            if (!srs || new Date(srs.due_at) <= new Date()) {
               dueCardsCount++;
             }
           } else {
