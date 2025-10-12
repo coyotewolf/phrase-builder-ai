@@ -84,6 +84,9 @@ export interface UserSettings {
   errorCardsTopN?: number;
   errorCardsMinErrors?: number;
   errorCardsMinErrorRate?: number;
+  firebase_uid?: string;
+  auto_backup_enabled?: boolean; // 確保這個也存在
+  auto_backup_time?: string; // 例如 "HH:MM" 格式
 }
 
 export interface Notification {
@@ -112,8 +115,39 @@ function logIndexedDBError(operation: string, error: DOMException | null) {
   // TODO: Integrate with a global toast notification system if needed
 }
 
+import { db as firestoreDb, auth } from './firebase';
+import { doc, setDoc, deleteDoc, collection, query, getDocs, writeBatch, QuerySnapshot, DocumentData, updateDoc, deleteField } from 'firebase/firestore';
+import { User } from 'firebase/auth';
+import { ref, uploadString, getDownloadURL } from 'firebase/storage'; // Import Storage functions
+import { storage } from './firebase'; // Import storage instance
+
 const DB_NAME = 'vocabulary_flow';
 const DB_VERSION = 3;
+
+// Helper function to get Firestore document reference for a given path
+const getFirestoreDocRef = (user: User, collectionName: string, docId: string) => {
+  return doc(firestoreDb, `users/${user.uid}/${collectionName}/${docId}`);
+};
+
+
+function cleanupUndefined(obj: any): any {
+  if (obj === null || obj === undefined) {
+    return null;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(v => cleanupUndefined(v));
+  }
+  if (typeof obj === 'object') {
+    const newObj: { [key: string]: any } = {};
+    for (const key in obj) {
+      if (obj[key] !== undefined) {
+        newObj[key] = cleanupUndefined(obj[key]);
+      }
+    }
+    return newObj;
+  }
+  return obj;
+}
 
 class VocabularyDB {
   private db: IDBDatabase | null = null;
@@ -188,6 +222,7 @@ class VocabularyDB {
     return transaction.objectStore(storeName);
   }
 
+
   // Wordbooks
   async getAllWordbooks(offset: number = 0, limit: number = Infinity): Promise<Wordbook[]> {
     const store = await this.getStore('wordbooks');
@@ -238,7 +273,9 @@ class VocabularyDB {
     };
     return new Promise((resolve, reject) => {
       const request = store.add(newWordbook);
-      request.onsuccess = () => resolve(newWordbook);
+      request.onsuccess = () => {
+        resolve(newWordbook);
+      };
       request.onerror = () => {
         logIndexedDBError('createWordbook', request.error);
         reject(request.error);
@@ -267,7 +304,9 @@ class VocabularyDB {
         };
         
         const putRequest = store.put(updated);
-        putRequest.onsuccess = () => resolve(updated);
+        putRequest.onsuccess = () => {
+          resolve(updated);
+        };
         putRequest.onerror = () => {
           logIndexedDBError('updateWordbook.put', putRequest.error);
           reject(putRequest.error);
@@ -285,7 +324,9 @@ class VocabularyDB {
     const store = await this.getStore('wordbooks', 'readwrite');
     return new Promise((resolve, reject) => {
       const request = store.delete(id);
-      request.onsuccess = () => resolve();
+      request.onsuccess = () => {
+        resolve();
+      };
       request.onerror = () => {
         logIndexedDBError('deleteWordbook', request.error);
         reject(request.error);
@@ -346,7 +387,9 @@ class VocabularyDB {
     };
     return new Promise((resolve, reject) => {
       const request = store.add(newCard);
-      request.onsuccess = () => resolve(newCard);
+      request.onsuccess = () => {
+        resolve(newCard);
+      };
       request.onerror = () => {
         logIndexedDBError('createCard', request.error);
         reject(request.error);
@@ -375,7 +418,9 @@ class VocabularyDB {
         };
         
         const putRequest = store.put(updated);
-        putRequest.onsuccess = () => resolve(updated);
+        putRequest.onsuccess = () => {
+          resolve(updated);
+        };
         putRequest.onerror = () => {
           logIndexedDBError('updateCard.put', putRequest.error);
           reject(putRequest.error);
@@ -393,7 +438,9 @@ class VocabularyDB {
     const store = await this.getStore('cards', 'readwrite');
     return new Promise((resolve, reject) => {
       const request = store.delete(id);
-      request.onsuccess = () => resolve();
+      request.onsuccess = () => {
+        resolve();
+      };
       request.onerror = () => {
         logIndexedDBError('deleteCard', request.error);
         reject(request.error);
@@ -432,7 +479,9 @@ class VocabularyDB {
     
     return new Promise((resolve, reject) => {
       const request = existing ? store.put(stats) : store.add(stats);
-      request.onsuccess = () => resolve(stats);
+      request.onsuccess = () => {
+        resolve(stats);
+      };
       request.onerror = () => {
         logIndexedDBError('createOrUpdateCardStats', request.error);
         reject(request.error);
@@ -472,7 +521,9 @@ class VocabularyDB {
     
     return new Promise((resolve, reject) => {
       const request = existing ? store.put(srs) : store.add(srs);
-      request.onsuccess = () => resolve(srs);
+      request.onsuccess = () => {
+        resolve(srs);
+      };
       request.onerror = () => {
         logIndexedDBError('createOrUpdateCardSRS', request.error);
         reject(request.error);
@@ -542,7 +593,9 @@ class VocabularyDB {
     
     return new Promise((resolve, reject) => {
       const request = store.put(settings);
-      request.onsuccess = () => resolve(settings);
+      request.onsuccess = () => {
+        resolve(settings);
+      };
       request.onerror = () => {
         logIndexedDBError('updateUserSettings', request.error);
         reject(request.error);
@@ -609,7 +662,9 @@ class VocabularyDB {
 
     return new Promise((resolve, reject) => {
       const request = store.put(record);
-      request.onsuccess = () => resolve(record);
+      request.onsuccess = () => {
+        resolve(record);
+      };
       request.onerror = () => {
         logIndexedDBError('createOrUpdateDailyReviewRecord', request.error);
         reject(request.error);
@@ -649,7 +704,9 @@ class VocabularyDB {
     };
     return new Promise((resolve, reject) => {
       const request = store.add(newNotification);
-      request.onsuccess = () => resolve(newNotification);
+      request.onsuccess = () => {
+        resolve(newNotification);
+      };
       request.onerror = () => {
         logIndexedDBError('createNotification', request.error);
         reject(request.error);
@@ -666,7 +723,9 @@ class VocabularyDB {
         if (notification) {
           notification.read = true;
           const putRequest = store.put(notification);
-          putRequest.onsuccess = () => resolve();
+          putRequest.onsuccess = () => {
+            resolve();
+          };
           putRequest.onerror = () => {
             logIndexedDBError('markNotificationAsRead.put', putRequest.error);
             reject(putRequest.error);
@@ -691,7 +750,9 @@ class VocabularyDB {
         notification.read = true;
         return new Promise<void>((res, rej) => {
           const request = store.put(notification);
-          request.onsuccess = () => res();
+          request.onsuccess = () => {
+            res();
+          };
           request.onerror = () => rej(request.error);
         });
       });
@@ -709,7 +770,9 @@ class VocabularyDB {
     const store = await this.getStore('notifications', 'readwrite');
     return new Promise((resolve, reject) => {
       const request = store.delete(id);
-      request.onsuccess = () => resolve();
+      request.onsuccess = () => {
+        resolve();
+      };
       request.onerror = () => {
         logIndexedDBError('deleteNotification', request.error);
         reject(request.error);
@@ -718,9 +781,14 @@ class VocabularyDB {
   }
 
   // Export all data
-  async exportAllData(): Promise<string> {
+  async exportAllData(isAutoBackup: boolean = false): Promise<{ downloadUrl: string, fileName: string }> {
     await this.init();
     
+    const user = auth.currentUser;
+    if (!user) {
+      throw new Error("User not authenticated for cloud backup.");
+    }
+
     // Open a single transaction for all reads to prevent transaction timeout
     const transaction = this.db!.transaction(
       ['wordbooks', 'cards', 'card_stats', 'card_srs', 'daily_review_records', 'notifications'],
@@ -798,7 +866,16 @@ class VocabularyDB {
       exported_at: new Date().toISOString(),
     };
 
-    return JSON.stringify(data, null, 2);
+    const jsonData = JSON.stringify(data, null, 2);
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const backupType = isAutoBackup ? 'auto-backup' : 'manual-backup';
+    const fileName = `vocabulary-flow-${backupType}-${timestamp}.json`;
+    const storageRef = ref(storage, `users/${user.uid}/backups/${fileName}`);
+
+    await uploadString(storageRef, jsonData, 'raw');
+    const downloadUrl = await getDownloadURL(storageRef);
+
+    return { downloadUrl, fileName };
   }
 
   // Import all data
@@ -913,6 +990,92 @@ class VocabularyDB {
     if (data.settings) {
       await this.updateUserSettings(data.settings);
     }
+  }
+
+  async uploadAllDataToFirestore(): Promise<void> {
+    const user = auth.currentUser;
+    if (!user) {
+      throw new Error("User not authenticated for cloud sync.");
+    }
+
+    await this.init();
+
+    const transaction = this.db!.transaction(
+      ['wordbooks', 'cards', 'card_stats', 'card_srs', 'daily_review_records', 'notifications', 'user_settings'],
+      'readonly'
+    );
+
+    const stores = {
+      wordbooks: transaction.objectStore('wordbooks'),
+      cards: transaction.objectStore('cards'),
+      card_stats: transaction.objectStore('card_stats'),
+      card_srs: transaction.objectStore('card_srs'),
+      daily_review_records: transaction.objectStore('daily_review_records'),
+      notifications: transaction.objectStore('notifications'),
+      user_settings: transaction.objectStore('user_settings'),
+    };
+
+    const dataPromises = Object.entries(stores).map(([name, store]) => 
+      new Promise<[string, any[]]>((resolve, reject) => {
+        const request = store.getAll();
+        request.onsuccess = () => resolve([name, request.result]);
+        request.onerror = () => reject(request.error);
+      })
+    );
+
+    const allDataArray = await Promise.all(dataPromises);
+    const allData = Object.fromEntries(allDataArray);
+
+    const batch = writeBatch(firestoreDb);
+
+    // Clear existing user data in Firestore before uploading
+    for (const collectionName in stores) {
+      const q = query(collection(firestoreDb, `users/${user.uid}/${collectionName}`));
+      const snapshot = await getDocs(q);
+      snapshot.docs.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+    }
+    await batch.commit();
+
+    const newBatch = writeBatch(firestoreDb);
+
+    for (const collectionName in allData) {
+      for (const item of allData[collectionName]) {
+        if (collectionName === 'user_settings') {
+          const settingsToUpload = { ...item, id: user.uid };
+          newBatch.set(getFirestoreDocRef(user, 'user_settings', 'default'), cleanupUndefined(settingsToUpload));
+        } else {
+          newBatch.set(getFirestoreDocRef(user, collectionName, item.id), cleanupUndefined(item));
+        }
+      }
+    }
+
+    await newBatch.commit();
+    console.log("All data uploaded to Firestore successfully.");
+  }
+
+  async downloadAllDataFromFirestore(): Promise<any> {
+    const user = auth.currentUser;
+    if (!user) {
+      throw new Error("User not authenticated for cloud sync.");
+    }
+
+    const collectionsToSync = [
+      'wordbooks', 'cards', 'card_stats', 'card_srs', 
+      'daily_review_records', 'notifications', 'user_settings'
+    ];
+
+    const data: { [key: string]: any[] } = {};
+
+    for (const collectionName of collectionsToSync) {
+      const q = query(collection(firestoreDb, `users/${user.uid}/${collectionName}`));
+      const snapshot = await getDocs(q);
+      data[collectionName] = snapshot.docs.map(doc => doc.data());
+    }
+
+    console.log("All data downloaded from Firestore successfully.");
+    return data;
   }
 }
 
