@@ -102,12 +102,14 @@ function addDays(date: Date, days: number): Date {
 export type Quality = 0 | 1 | 2 | 3 | 4 | 5;
 
 /**
- * Convert user answer to quality score
- * @param quality - Quality of recall (0-5, where 0 is complete blackout, 5 is perfect recall)
+ * Convert user answer (correct/incorrect) to quality score
+ * @param correct - Whether the user got the answer correct
  * @returns Quality score (0-5)
  */
-export function answerToQuality(quality: Quality): Quality {
-  return quality;
+export function answerToQuality(correct: boolean): Quality {
+  // Correct answers get quality 4 (good recall)
+  // Incorrect answers get quality 1 (poor recall, needs reset)
+  return correct ? 4 : 1;
 }
 
 /**
