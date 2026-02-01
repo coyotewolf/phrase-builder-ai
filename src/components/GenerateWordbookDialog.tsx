@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -17,7 +17,7 @@ import { Loader2, Sparkles } from "lucide-react";
 import { db } from "@/lib/db";
 import { generateWordDetails } from "@/lib/gemini-api";
 import { toast } from "sonner";
-import * as wordlists from "@/data/preset-wordlists";
+import { getPresetWordlists, type Wordlists } from "@/data/preset-wordlists";
 
 interface GenerateWordbookDialogProps {
   open: boolean;
@@ -30,21 +30,21 @@ interface PresetWordbook {
   name: string;
   description: string;
   level: string;
-  words: string[];
+  getWords: (wordlists: Wordlists) => string[];
 }
 
-const PRESET_WORDBOOKS: PresetWordbook[] = [
+const PRESET_WORDBOOK_CONFIGS: PresetWordbook[] = [
   {
     id: "7000-all",
     name: "高中7000單 - 完整版",
     description: "高中必背7000單字完整列表",
     level: "高中",
-    words: [
-      ...wordlists.HIGH_SCHOOL_7000,
-      ...wordlists.HIGH_SCHOOL_LEVEL_2,
-      ...wordlists.HIGH_SCHOOL_LEVEL_3,
-      ...wordlists.HIGH_SCHOOL_LEVEL_4,
-      ...wordlists.HIGH_SCHOOL_LEVEL_5,
+    getWords: (w) => [
+      ...w.HIGH_SCHOOL_7000,
+      ...w.HIGH_SCHOOL_LEVEL_2,
+      ...w.HIGH_SCHOOL_LEVEL_3,
+      ...w.HIGH_SCHOOL_LEVEL_4,
+      ...w.HIGH_SCHOOL_LEVEL_5,
     ].slice(0, 7000)
   },
   {
@@ -52,91 +52,91 @@ const PRESET_WORDBOOKS: PresetWordbook[] = [
     name: "高中7000單 - Level 1",
     description: "最基礎必背1000單字",
     level: "高中",
-    words: wordlists.HIGH_SCHOOL_7000
+    getWords: (w) => w.HIGH_SCHOOL_7000
   },
   {
     id: "7000-level2",
     name: "高中7000單 - Level 2",
     description: "進階1000單字",
     level: "高中",
-    words: wordlists.HIGH_SCHOOL_LEVEL_2
+    getWords: (w) => w.HIGH_SCHOOL_LEVEL_2
   },
   {
     id: "7000-level3",
     name: "高中7000單 - Level 3",
     description: "中階1500單字",
     level: "高中",
-    words: wordlists.HIGH_SCHOOL_LEVEL_3
+    getWords: (w) => w.HIGH_SCHOOL_LEVEL_3
   },
   {
     id: "7000-level4",
     name: "高中7000單 - Level 4",
     description: "中高階1500單字",
     level: "高中",
-    words: wordlists.HIGH_SCHOOL_LEVEL_4
+    getWords: (w) => w.HIGH_SCHOOL_LEVEL_4
   },
   {
     id: "7000-level5",
     name: "高中7000單 - Level 5",
     description: "高階2000單字",
     level: "高中",
-    words: wordlists.HIGH_SCHOOL_LEVEL_5
+    getWords: (w) => w.HIGH_SCHOOL_LEVEL_5
   },
   {
     id: "toefl-3000",
     name: "托福核心3000單字",
     description: "托福考試高頻核心詞彙完整收錄",
     level: "TOEFL",
-    words: wordlists.TOEFL_3000
+    getWords: (w) => w.TOEFL_3000
   },
   {
     id: "gre-3000",
     name: "GRE核心3000單字",
     description: "GRE考試必備高階詞彙完整收錄",
     level: "GRE",
-    words: wordlists.GRE_3000
+    getWords: (w) => w.GRE_3000
   },
   {
     id: "ielts-core",
     name: "雅思核心詞彙3000",
     description: "IELTS 考試必備詞彙",
     level: "IELTS",
-    words: wordlists.IELTS_CORE
+    getWords: (w) => w.IELTS_CORE
   },
   {
     id: "toeic-core",
     name: "多益核心詞彙3000",
     description: "TOEIC 考試必備商務英語詞彙",
     level: "TOEIC",
-    words: wordlists.TOEIC_CORE
+    getWords: (w) => w.TOEIC_CORE
   },
   {
     id: "sat-core",
     name: "SAT核心詞彙2000",
     description: "SAT 考試必備詞彙",
     level: "SAT",
-    words: wordlists.SAT_CORE
+    getWords: (w) => w.SAT_CORE
   },
   {
     id: "business-english",
     name: "商務英語核心1500",
     description: "商務溝通必備詞彙",
     level: "大學",
-    words: wordlists.BUSINESS_ENGLISH
+    getWords: (w) => w.BUSINESS_ENGLISH
   },
   {
     id: "academic-english",
     name: "學術英語核心1500",
     description: "學術寫作與研究必備詞彙",
     level: "大學",
-    words: wordlists.ACADEMIC_ENGLISH
+    getWords: (w) => w.ACADEMIC_ENGLISH
   },
   {
     id: "daily-english",
     name: "日常生活英語1000",
     description: "日常對話必備詞彙",
     level: "國中",
-    words: wordlists.DAILY_ENGLISH
+    getWords: (w) => w.DAILY_ENGLISH
   }
 ];
 
@@ -145,7 +145,7 @@ export function GenerateWordbookDialog({
   onOpenChange,
   onSuccess,
 }: GenerateWordbookDialogProps) {
-  const [selectedPreset, setSelectedPreset] = useState<string>(PRESET_WORDBOOKS[0].id);
+  const [selectedPreset, setSelectedPreset] = useState<string>(PRESET_WORDBOOK_CONFIGS[0].id);
   const [customName, setCustomName] = useState("");
   const [customDescription, setCustomDescription] = useState("");
   const [customLevel, setCustomLevel] = useState("不限制");
@@ -153,6 +153,22 @@ export function GenerateWordbookDialog({
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [activeTab, setActiveTab] = useState("preset");
+  const [wordlists, setWordlists] = useState<Wordlists | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (open && !wordlists) {
+      setIsLoading(true);
+      getPresetWordlists()
+        .then(setWordlists)
+        .finally(() => setIsLoading(false));
+    }
+  }, [open, wordlists]);
+
+  const getWordCount = (preset: PresetWordbook): number => {
+    if (!wordlists) return 0;
+    return preset.getWords(wordlists).length;
+  };
 
   const handleGenerate = async () => {
     let name: string;
@@ -161,12 +177,16 @@ export function GenerateWordbookDialog({
     let words: string[];
 
     if (activeTab === "preset") {
-      const preset = PRESET_WORDBOOKS.find(p => p.id === selectedPreset);
+      if (!wordlists) {
+        toast.error("單詞列表載入中，請稍後再試");
+        return;
+      }
+      const preset = PRESET_WORDBOOK_CONFIGS.find(p => p.id === selectedPreset);
       if (!preset) return;
       name = preset.name;
       description = preset.description;
       level = preset.level;
-      words = preset.words;
+      words = preset.getWords(wordlists);
     } else {
       // Custom input
       if (!customName.trim()) {
@@ -307,35 +327,42 @@ export function GenerateWordbookDialog({
           </TabsList>
 
           <TabsContent value="preset" className="space-y-4">
-            <RadioGroup value={selectedPreset} onValueChange={setSelectedPreset}>
-              <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
-                {PRESET_WORDBOOKS.map((preset) => (
-                  <div
-                    key={preset.id}
-                    className="flex items-start space-x-3 p-4 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer"
-                    onClick={() => setSelectedPreset(preset.id)}
-                  >
-                    <RadioGroupItem value={preset.id} id={preset.id} className="mt-1" />
-                    <Label htmlFor={preset.id} className="flex-1 cursor-pointer">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <p className="font-semibold">{preset.name}</p>
-                          <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded">
-                            {preset.level}
-                          </span>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          {preset.description}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          共 {preset.words.length} 個單字
-                        </p>
-                      </div>
-                    </Label>
-                  </div>
-                ))}
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-muted-foreground">載入單詞列表...</span>
               </div>
-            </RadioGroup>
+            ) : (
+              <RadioGroup value={selectedPreset} onValueChange={setSelectedPreset}>
+                <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
+                  {PRESET_WORDBOOK_CONFIGS.map((preset) => (
+                    <div
+                      key={preset.id}
+                      className="flex items-start space-x-3 p-4 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer"
+                      onClick={() => setSelectedPreset(preset.id)}
+                    >
+                      <RadioGroupItem value={preset.id} id={preset.id} className="mt-1" />
+                      <Label htmlFor={preset.id} className="flex-1 cursor-pointer">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold">{preset.name}</p>
+                            <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded">
+                              {preset.level}
+                            </span>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {preset.description}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            共 {getWordCount(preset)} 個單字
+                          </p>
+                        </div>
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </RadioGroup>
+            )}
           </TabsContent>
 
           <TabsContent value="custom" className="space-y-4">
@@ -428,7 +455,7 @@ export function GenerateWordbookDialog({
           >
             取消
           </Button>
-          <Button onClick={handleGenerate} disabled={isGenerating}>
+          <Button onClick={handleGenerate} disabled={isGenerating || (activeTab === "preset" && isLoading)}>
             {isGenerating ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
