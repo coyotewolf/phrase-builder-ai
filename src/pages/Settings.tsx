@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, Target, Globe, Volume2, Bell, Upload, Download, Info, Key, Brain, LogIn, LogOut, User as UserIcon, Clock } from "lucide-react";
+import { ChevronRight, Target, Globe, Volume2, Bell, Upload, Download, Info, Key, Brain, LogIn, LogOut, User as UserIcon, Clock, Database, Loader2 } from "lucide-react";
 import { TimePicker } from "@/components/TimePicker"; // Import TimePicker
 import {
   AlertDialog,
@@ -29,6 +29,7 @@ import { ReviewModeSelectionDialog } from "@/components/ReviewModeSelectionDialo
 import { auth } from "@/lib/firebase"; // Import Firebase auth
 import { GoogleAuthProvider, signInWithRedirect, signOut } from "firebase/auth"; // Import auth functions
 import { User } from "firebase/auth"; // Import User type separately
+import { initializeSampleData } from "@/lib/sample-data";
 
 interface SettingsProps {
   user: User | null; // Accept user prop
@@ -57,6 +58,7 @@ const Settings = ({ user }: SettingsProps) => { // Accept user prop
   const [isCloudSyncDialogOpen, setIsCloudSyncDialogOpen] = useState(false);
   const [isAutoBackupTimeDialogOpen, setIsAutoBackupTimeDialogOpen] = useState(false);
   const [tempAutoBackupTime, setTempAutoBackupTime] = useState<string>('00:00');
+  const [isLoadingSampleData, setIsLoadingSampleData] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -492,6 +494,45 @@ const Settings = ({ user }: SettingsProps) => { // Accept user prop
                 <div className="text-left">
                   <p className="font-medium">匯出資料</p>
                   <p className="text-sm text-muted-foreground">備份你的學習進度到 JSON 檔案</p>
+                </div>
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+            </button>
+          </Card>
+
+          <Card className="p-4">
+            <button
+              className="w-full flex items-center justify-between"
+              onClick={async () => {
+                setIsLoadingSampleData(true);
+                try {
+                  const result = await initializeSampleData();
+                  if (result.wordbooks === 0) {
+                    toast.info("已有資料存在，跳過範例資料載入");
+                  } else {
+                    toast.success(`已載入 ${result.wordbooks} 個單詞書，共 ${result.cards} 張卡片`);
+                    setTimeout(() => window.location.reload(), 1000);
+                  }
+                } catch (error) {
+                  console.error("Failed to load sample data:", error);
+                  toast.error("載入範例資料失敗");
+                } finally {
+                  setIsLoadingSampleData(false);
+                }
+              }}
+              disabled={isLoadingSampleData}
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-background rounded-lg">
+                  {isLoadingSampleData ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <Database className="h-5 w-5" />
+                  )}
+                </div>
+                <div className="text-left">
+                  <p className="font-medium">載入範例資料</p>
+                  <p className="text-sm text-muted-foreground">快速體驗應用功能</p>
                 </div>
               </div>
               <ChevronRight className="h-5 w-5 text-muted-foreground" />
