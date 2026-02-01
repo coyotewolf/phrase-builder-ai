@@ -780,6 +780,79 @@ class VocabularyDB {
     });
   }
 
+  // Clear all notifications
+  async clearAllNotifications(): Promise<void> {
+    const store = await this.getStore('notifications', 'readwrite');
+    return new Promise((resolve, reject) => {
+      const request = store.clear();
+      request.onsuccess = () => resolve();
+      request.onerror = () => {
+        logIndexedDBError('clearAllNotifications', request.error);
+        reject(request.error);
+      };
+    });
+  }
+
+  // Clear all daily review records
+  async clearAllDailyReviewRecords(): Promise<void> {
+    const store = await this.getStore('daily_review_records', 'readwrite');
+    return new Promise((resolve, reject) => {
+      const request = store.clear();
+      request.onsuccess = () => resolve();
+      request.onerror = () => {
+        logIndexedDBError('clearAllDailyReviewRecords', request.error);
+        reject(request.error);
+      };
+    });
+  }
+
+  // Delete wordbook with all its cards, stats, and SRS
+  async deleteWordbookWithCards(wordbookId: string): Promise<void> {
+    const cards = await this.getCardsByWordbook(wordbookId);
+    
+    // Delete stats and SRS for each card
+    for (const card of cards) {
+      await this.deleteCardStats(card.id);
+      await this.deleteCardSRS(card.id);
+      await this.deleteCard(card.id);
+    }
+    
+    // Delete the wordbook itself
+    await this.deleteWordbook(wordbookId);
+  }
+
+  // Delete card stats
+  async deleteCardStats(cardId: string): Promise<void> {
+    const stats = await this.getCardStats(cardId);
+    if (!stats) return;
+    
+    const store = await this.getStore('card_stats', 'readwrite');
+    return new Promise((resolve, reject) => {
+      const request = store.delete(stats.id);
+      request.onsuccess = () => resolve();
+      request.onerror = () => {
+        logIndexedDBError('deleteCardStats', request.error);
+        reject(request.error);
+      };
+    });
+  }
+
+  // Delete card SRS
+  async deleteCardSRS(cardId: string): Promise<void> {
+    const srs = await this.getCardSRS(cardId);
+    if (!srs) return;
+    
+    const store = await this.getStore('card_srs', 'readwrite');
+    return new Promise((resolve, reject) => {
+      const request = store.delete(srs.id);
+      request.onsuccess = () => resolve();
+      request.onerror = () => {
+        logIndexedDBError('deleteCardSRS', request.error);
+        reject(request.error);
+      };
+    });
+  }
+
   // Export all data
   async exportAllData(isAutoBackup: boolean = false): Promise<{ downloadUrl: string, fileName: string }> {
     await this.init();

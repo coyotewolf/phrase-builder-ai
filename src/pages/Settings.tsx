@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, Target, Globe, Volume2, Bell, Upload, Download, Info, Key, Brain, LogIn, LogOut, User as UserIcon, Clock, Database, Loader2 } from "lucide-react";
+import { ChevronRight, Target, Globe, Volume2, Bell, Upload, Download, Info, Key, Brain, LogIn, LogOut, User as UserIcon, Clock, Database, Loader2, Trash2 } from "lucide-react";
 import { TimePicker } from "@/components/TimePicker"; // Import TimePicker
 import {
   AlertDialog,
@@ -29,7 +29,7 @@ import { ReviewModeSelectionDialog } from "@/components/ReviewModeSelectionDialo
 import { auth } from "@/lib/firebase"; // Import Firebase auth
 import { GoogleAuthProvider, signInWithRedirect, signOut } from "firebase/auth"; // Import auth functions
 import { User } from "firebase/auth"; // Import User type separately
-import { initializeSampleData } from "@/lib/sample-data";
+import { initializeSampleData, clearAllData } from "@/lib/sample-data";
 
 interface SettingsProps {
   user: User | null; // Accept user prop
@@ -59,6 +59,8 @@ const Settings = ({ user }: SettingsProps) => { // Accept user prop
   const [isAutoBackupTimeDialogOpen, setIsAutoBackupTimeDialogOpen] = useState(false);
   const [tempAutoBackupTime, setTempAutoBackupTime] = useState<string>('00:00');
   const [isLoadingSampleData, setIsLoadingSampleData] = useState(false);
+  const [isClearDataDialogOpen, setIsClearDataDialogOpen] = useState(false);
+  const [isClearingData, setIsClearingData] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -539,6 +541,29 @@ const Settings = ({ user }: SettingsProps) => { // Accept user prop
             </button>
           </Card>
 
+          <Card className="p-4 border-destructive/50">
+            <button
+              className="w-full flex items-center justify-between"
+              onClick={() => setIsClearDataDialogOpen(true)}
+              disabled={isClearingData}
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-destructive/10 rounded-lg">
+                  {isClearingData ? (
+                    <Loader2 className="h-5 w-5 animate-spin text-destructive" />
+                  ) : (
+                    <Trash2 className="h-5 w-5 text-destructive" />
+                  )}
+                </div>
+                <div className="text-left">
+                  <p className="font-medium text-destructive">清空所有資料</p>
+                  <p className="text-sm text-muted-foreground">刪除所有單詞書、卡片和學習紀錄</p>
+                </div>
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+            </button>
+          </Card>
+
           <Card className="p-4">
             <button
               className="w-full flex items-center justify-between"
@@ -817,6 +842,48 @@ const Settings = ({ user }: SettingsProps) => { // Accept user prop
             <AlertDialogCancel>取消</AlertDialogCancel>
             <AlertDialogAction onClick={handleSaveAutoBackupTime}>
               儲存
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Clear All Data Confirmation Dialog */}
+      <AlertDialog open={isClearDataDialogOpen} onOpenChange={setIsClearDataDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive">確定要清空所有資料嗎？</AlertDialogTitle>
+            <AlertDialogDescription>
+              此操作將永久刪除所有單詞書、卡片、學習進度和統計資料。此操作無法復原！
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isClearingData}>取消</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isClearingData}
+              onClick={async () => {
+                setIsClearingData(true);
+                try {
+                  await clearAllData();
+                  toast.success("所有資料已清空");
+                  setIsClearDataDialogOpen(false);
+                  setTimeout(() => window.location.reload(), 1000);
+                } catch (error) {
+                  console.error("Failed to clear data:", error);
+                  toast.error("清空資料失敗");
+                } finally {
+                  setIsClearingData(false);
+                }
+              }}
+            >
+              {isClearingData ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  清空中...
+                </>
+              ) : (
+                "確定清空"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

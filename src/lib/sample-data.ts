@@ -448,12 +448,16 @@ export async function initializeSampleData(): Promise<{ wordbooks: number; cards
 }
 
 export async function clearAllData(): Promise<void> {
+  // Clear all wordbooks and their cards (including stats and SRS)
   const wordbooks = await db.getAllWordbooks();
   for (const wordbook of wordbooks) {
-    const cards = await db.getCardsByWordbook(wordbook.id);
-    for (const card of cards) {
-      await db.deleteCard(card.id);
-    }
-    await db.deleteWordbook(wordbook.id);
+    // deleteWordbookWithCards handles cards, stats, and SRS deletion
+    await db.deleteWordbookWithCards(wordbook.id);
   }
+  
+  // Clear daily review records
+  await db.clearAllDailyReviewRecords();
+  
+  // Clear notifications
+  await db.clearAllNotifications();
 }
