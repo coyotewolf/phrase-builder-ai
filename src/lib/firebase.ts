@@ -25,12 +25,13 @@ const storage = getStorage(app);
 // Set authentication persistence
 setPersistence(auth, browserLocalPersistence);
 
-// Connect to emulators in development
-if (import.meta.env.DEV) {
-  connectAuthEmulator(auth, "http://localhost:9099");
-  connectFirestoreEmulator(db, "localhost", 8081);
-  connectStorageEmulator(storage, "localhost", 9199);
-}
+// Note: Emulator connections removed for production use
+// To use emulators locally, uncomment the following:
+// if (import.meta.env.DEV) {
+//   connectAuthEmulator(auth, "http://localhost:9099");
+//   connectFirestoreEmulator(db, "localhost", 8081);
+//   connectStorageEmulator(storage, "localhost", 9199);
+// }
 
 console.log("Firebase App initialized:", app); // Keep the log for now
 export { app, analytics, auth, db, storage };
