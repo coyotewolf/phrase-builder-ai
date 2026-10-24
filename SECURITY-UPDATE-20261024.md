@@ -10,12 +10,20 @@ Applied semver-compatible audit fixes with install scripts disabled. No audit --
 Use npm ci; package-lock.json is the authoritative repaired dependency graph. Stale root Bun lockfiles are retired to prevent reinstalling vulnerable versions.
 
 Windows Node 24.16.0: production build passed. Lint reports source errors; it does not pass. Authenticated browser/backend workflows are not verified.
-Full audit: 5 high / 7 moderate / 0 low / 0 critical.
-Production audit: 5 high / 5 moderate / 0 low / 0 critical.
-Remaining findings require separately tested migrations. A version finding does not demonstrate compromise.
 
 Existing loopback and security changes are preserved. No merge, production deployment, grants, secrets, or cross-account migration was performed.
 
 Official Vite advisories: GHSA-rq7h-c2jc-7f22; GHSA-9jrq-w75r-8gcw; GHSA-8g5g-mxqh-grgj.
 
-Remaining high findings include Firebase/gRPC and Zod. Do not accept the audit-suggested Firebase downgrade without compatibility assessment.
+
+## Completed second pass
+
+Removed unused Zod and @hookform/resolvers after checking tracked source imports. Migrated React Router DOM 6.x to 7.18.4; React 18 is retained. The applications use simple wildcard fallback routes and do not use the affected multi-segment relative splat patterns.
+
+All production builds and real Chromium 404-to-home navigation smoke checks passed with external requests blocked. This does not verify authenticated backend workflows. Existing source lint failures remain outside this dependency update.
+
+Full npm audit: 0 critical / 0 high / 5 moderate / 0 low. Production npm audit: 0 critical / 0 high / 3 moderate / 0 low. The remaining findings are the PostCSS selector-parser/Tailwind 3 toolchain (GHSA-rj75-hqrm-r3gf). Resolving them requires a separately validated CSS-toolchain migration; no major parser override, audit suppression, or audit --force was used. Production audit includes build tooling brought in by the current dependency classification; it is not proof of runtime exploitability.
+
+Firebase 12.4.0 is retained. A targeted @firebase/firestore override upgrades @grpc/grpc-js from the vulnerable 1.9 line to 1.13.6 (same major, patched release), avoiding the audit-suggested Firebase downgrade. The actual installed Firebase client passed owner write/read/delete and non-owner read denial against the local demo Firestore emulator. grpc.test.cjs is the repeatable test; start a demo-security-audit emulator on 127.0.0.1:8787 with ownership rules before running node --test grpc.test.cjs. Never point this fixture at production.
+
+No merge or production deployment was performed in either pass.
