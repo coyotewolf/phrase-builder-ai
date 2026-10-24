@@ -22,8 +22,16 @@ Removed unused Zod and @hookform/resolvers after checking tracked source imports
 
 All production builds and real Chromium 404-to-home navigation smoke checks passed with external requests blocked. This does not verify authenticated backend workflows. Existing source lint failures remain outside this dependency update.
 
-Full npm audit: 0 critical / 0 high / 5 moderate / 0 low. Production npm audit: 0 critical / 0 high / 3 moderate / 0 low. The remaining findings are the PostCSS selector-parser/Tailwind 3 toolchain (GHSA-rj75-hqrm-r3gf). Resolving them requires a separately validated CSS-toolchain migration; no major parser override, audit suppression, or audit --force was used. Production audit includes build tooling brought in by the current dependency classification; it is not proof of runtime exploitability.
+Full npm audit: 0 critical / 0 high / 5 moderate / 0 low. Production npm audit: 0 critical / 0 high / 3 moderate / 0 low. The remaining npm audit records concern the PostCSS selector-parser/Tailwind 3 toolchain (GHSA-rj75-hqrm-r3gf); see the upstream backport assessment below. No major parser override, audit suppression, or audit --force was used. Production audit includes build tooling brought in by the current dependency classification; it is not proof of runtime exploitability.
 
 Firebase 12.4.0 is retained. A targeted @firebase/firestore override upgrades @grpc/grpc-js from the vulnerable 1.9 line to 1.13.6 (same major, patched release), avoiding the audit-suggested Firebase downgrade. The actual installed Firebase client passed owner write/read/delete and non-owner read denial against the local demo Firestore emulator. grpc.test.cjs is the repeatable test; start a demo-security-audit emulator on 127.0.0.1:8787 with ownership rules before running node --test grpc.test.cjs. Never point this fixture at production.
 
 No merge or production deployment was performed in either pass.
+
+## CSS advisory backport assessment
+
+The upstream advisory now lists 6.1.5 as patched, alongside 7.1.6: https://github.com/postcss/postcss-selector-parser/security/advisories/GHSA-rj75-hqrm-r3gf . The npm audit data retrieved during this run still classifies all versions below 7.1.6 as affected. Preserve this raw discrepancy; do not suppress findings or claim the audit is zero.
+
+The main parser was already 6.1.5. A scoped same-major override updates typography's exact 6.0.10 dependency to 6.1.5; every installed parser is now the upstream-patched backport. This avoids a Tailwind 4 migration. Tracked source imports only reference Tailwind from build configuration; no application request path importing the selector parser was found. Ordinary trusted-source build-time use is outside the exploit path described upstream. Untrusted source/build inputs still deserve review.
+
+All seven production builds and Chromium navigation smoke tests were rerun. Math initially rejected an incorrectly formatted fixture key, then passed with the unchanged CI fixture configuration; deployment guards remained enabled.
