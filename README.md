@@ -199,7 +199,7 @@ src/
 
 ### 環境需求
 
-- Node.js 18+ 或 Bun
+- Node.js 22.12+ and npm
 - 現代瀏覽器（Chrome, Firefox, Safari, Edge）
 
 ### 本地開發
@@ -210,14 +210,10 @@ git clone <repository-url>
 cd vocabulary-flow
 
 # 安裝依賴
-npm install
-# 或使用 bun
-bun install
+npm ci
 
 # 啟動開發伺服器
 npm run dev
-# 或
-bun run dev
 ```
 
 應用將在 `http://localhost:8080` 運行。
@@ -226,8 +222,6 @@ bun run dev
 
 ```bash
 npm run build
-# 或
-bun run build
 ```
 
 建置產物將輸出到 `dist/` 目錄。
